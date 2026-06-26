@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nokia 3310 Snake Classic</title>
+    <!-- Fuentes retro y modernas de Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Colores de la página moderna */
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-color: #00ff66;
+            --accent-glow: rgba(0, 255, 102, 0.4);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+
+            /* Temas LCD de Nokia (Por defecto: Clásico Verde 3310) */
+            --lcd-bg: #8ba673;
+            --lcd-fg: #232d19;
+            --lcd-shadow: rgba(35, 45, 25, 0.15);
+            --lcd-grid: rgba(35, 45, 25, 0.04);
+        }
+
+        /* Temas LCD seleccionables */
+        .theme-green {
+            --lcd-bg: #8ba673;
+            --lcd-fg: #232d19;
+            --lcd-shadow: rgba(35, 45, 25, 0.18);
+            --lcd-grid: rgba(35, 45, 25, 0.04);
+        }
+
+        .theme-blue {
+            --lcd-bg: #87a7b3;
+            --lcd-fg: #142429;
+            --lcd-shadow: rgba(20, 36, 41, 0.18);
+            --lcd-grid: rgba(20, 36, 41, 0.04);
+        }
+
+        .theme-amber {
+            --lcd-bg: #dca358;
+            --lcd-fg: #3b2408;
+            --lcd-shadow: rgba(59, 36, 8, 0.18);
+            --lcd-grid: rgba(59, 36, 8, 0.04);
+        }
+
+        .theme-grey {
+            --lcd-bg: #98a08d;
+            --lcd-fg: #1c211a;
+            --lcd-shadow: rgba(28, 33, 26, 0.18);
+            --lcd-grid: rgba(28, 33, 26, 0.04);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top, #141b2f 0%, var(--bg-color) 100%);
+            min-height: 100vh;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        /* Fondo de cuadrícula neon */
+        .neon-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Contenedor Principal (Layout a 3 columnas en pantallas grandes) */
+        .main-wrapper {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+
+        /* Paneles laterales glassmorphic */
+        .side-panel {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 24px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 350px;
+        }
+
+        .side-panel h2 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 10px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .side-panel h2 span {
+            color: var(--accent-color);
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* Sección de controles */
+        .controls-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            font-size: 14px;
+        }
+
+        .control-key {
+            background: #252b3d;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-bottom: 3px solid rgba(255, 255, 255, 0.25);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 12px;
+            color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Tabla de Clasificación */
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .leaderboard-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+            padding: 8px 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .leaderboard-table td {
+            padding: 10px 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .leaderboard-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .leaderboard-table tr.top-rank {
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .top-rank .rank-badge {
+            background: var(--accent-color);
+            color: var(--bg-color);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        /* Configuración Rápida */
+        .settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-toggle {
+            background: #252b3d;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-toggle:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-color);
+        }
+
+        .btn-toggle.active {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-glow);
+            color: var(--accent-color);
+        }
+
+        /* Selector de Temas */
+        .theme-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .theme-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .theme-dot:hover {
+            transform: scale(1.15);
+        }
+
+        .theme-dot.selected {
+            border-color: #ffffff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .td-green { background: #8ba673; }
+        .td-blue { background: #87a7b3; }
+        .td-amber { background: #dca358; }
+        .td-grey { background: #98a08d; }
+
+        /* Contenedor del Celular */
+        .phone-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+            min-width: 380px;
+        }
+
+        /* --- NOKIA 3310 CSS MOCKUP --- */
+        .nokia-phone {
+            width: 360px;
+            height: 640px;
+            background: linear-gradient(180deg, #1d2737 0%, #151c27 100%);
+            border-radius: 45px 45px 80px 80px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.8),
+                inset 0 4px 6px rgba(255, 255, 255, 0.15),
+                inset 0 -10px 20px rgba(0, 0, 0, 0.6),
+                0 0 30px rgba(29, 39, 55, 0.4);
+            border: 4px solid #0f151e;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 25px;
+            box-sizing: border-box;
+        }
+
+        /* Rejilla del altavoz nokia */
+        .speaker-grille {
+            width: 60px;
+            height: 8px;
+            background: #0f151e;
+            border-radius: 4px;
+            margin-top: 15px;
+            margin-bottom: 12px;
+            box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Logo Nokia en el bisel */
+        .nokia-brand {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 16px;
+            color: #d1d5db;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 2px rgba(0, 0, 0, 0.8);
+            margin-bottom: 12px;
+        }
+
+        /* Bisel de la pantalla (Screen Bezel) */
+        .screen-bezel {
+            width: 100%;
+            background: linear-gradient(135deg, #1c2635 0%, #111823 100%);
+            border-radius: 20px;
+            padding: 16px;
+            border: 2px solid #0f151e;
+            box-shadow: 
+                inset 0 3px 10px rgba(0,0,0,0.8),
+                0 2px 3px rgba(255, 255, 255, 0.05);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        /* Líneas plateadas decorativas del bisel clásico del 3310 */
+        .screen-bezel::before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            right: 6px;
+            bottom: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            pointer-events: none;
+        }
+
+        /* Contenedor LCD (La pantalla encendida) */
+        .lcd-display {
+            width: 100%;
+            height: 190px;
+            background: var(--lcd-bg);
+            border-radius: 4px;
+            border: 4px solid #080b0f;
+            box-shadow: inset 0 6px 12px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        /* Efecto de cristal reflectante en pantalla */
+        .lcd-glare {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 50%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Líneas de escaneo sutiles para look retro LCD */
+        .lcd-scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0.05) 50%, rgba(0, 0, 0, 0) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        /* El Canvas de juego */
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        /* Teclado Físico (Keypad) */
+        .keypad {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin-top: auto;
+            gap: 12px;
+        }
+
+        /* Controles de Navegación */
+        .nav-keys {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            width: 100%;
+            gap: 10px;
+            padding: 0 10px;
+        }
+
+        .phone-btn {
+            background: linear-gradient(180deg, #c5ccd8 0%, #8ea0b3 100%);
+            border: 2px solid #5a6a7a;
+            border-bottom: 5px solid #3c4957;
+            border-radius: 12px;
+            height: 44px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #1e2633;
+            font-weight: 800;
+            font-size: 13px;
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+            box-shadow: 
+                0 4px 6px rgba(0, 0, 0, 0.3),
+                inset 0 1px 2px rgba(255, 255, 255, 0.6);
+            transition: all 0.1s ease;
+            position: relative;
+        }
+
+        .phone-btn:active {
+            transform: translateY(3px);
+            border-bottom-width: 2px;
+            box-shadow: 
+                0 1px 2px rgba(0, 0, 0, 0.4),
+                inset 0 1px 1px rgba(255, 255, 255, 0.4);
+        }
+
+        /* Botón de Menú Central Clásico */
+        .menu-btn {
+            grid-column: 2;
+            height: 38px;
+            border-radius: 20px;
+            background: linear-gradient(180deg, #3d4a5d 0%, #202b3a 100%);
+            border: 2px solid #141c27;
+            border-bottom: 5px solid #0d121b;
+            color: #d1d5db;
+            text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.4);
+        }
+
+        .menu-btn:active {
+            border-bottom-width: 2px;
+            transform: translateY(3px);
+        }
+
+        .c-btn {
+            border-radius: 5px 15px 5px 12px;
+        }
+
+        /* Teclado numérico */
+        .num-keys {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+            padding: 0 15px;
+        }
+
+        .num-btn {
+            height: 38px;
+            border-radius: 12px 12px 18px 18px;
+            font-size: 11px;
+            color: #2c3848;
+            background: linear-gradient(180deg, #dce2eb 0%, #b2becf 100%);
+            border: 1px solid #7c8d9f;
+            border-bottom: 4px solid #576575;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 1px;
+        }
+
+        .num-btn span.big-num {
+            font-size: 16px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .num-btn span.sub-text {
+            font-size: 8px;
+            opacity: 0.6;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Resaltar flechas físicas de los botones numéricos */
+        .num-btn.arrow-btn {
+            border-color: #6592e6;
+            box-shadow: 
+                0 4px 6px rgba(0, 0, 0, 0.3),
+                0 0 4px rgba(101, 146, 230, 0.3);
+        }
+
+        .num-btn.arrow-btn::after {
+            font-size: 8px;
+            color: #0b0f19;
+            font-weight: bold;
+        }
+        .num-btn-2::after { content: '▲'; }
+        .num-btn-4::after { content: '◀'; }
+        .num-btn-6::after { content: '▶'; }
+        .num-btn-8::after { content: '▼'; }
+
+        /* Información del pie */
+        footer {
+            margin-top: 40px;
+            font-size: 14px;
+            color: var(--text-muted);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- RESPONSIVE LAYOUT --- */
+        @media (max-width: 1100px) {
+            .main-wrapper {
+                flex-direction: column;
+                align-items: center;
+                gap: 25px;
+            }
+
+            .side-panel {
+                width: 100%;
+                max-width: 360px;
+            }
+
+            .phone-container {
+                order: -1; /* Poner el celular arriba en móvil */
+            }
+        }
+
+        @media (max-width: 400px) {
+            body {
+                padding: 10px;
+            }
+            .nokia-phone {
+                transform: scale(0.9);
+                margin: -30px 0;
+            }
+            .phone-container {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="theme-green">
+
+    <div class="neon-grid"></div>
+
+    <div class="main-wrapper">
+        
+        <!-- PANEL IZQUIERDO: Configuración e Instrucciones -->
+        <div class="side-panel">
+            <h2><span>CONFIGURACIÓN</span></h2>
+            
+            <div class="settings-group">
+                <div class="setting-item">
+                    <span>Sonido FX:</span>
+                    <button class="btn-toggle active" id="audioToggle" onclick="toggleAudio()">
+                        <span id="audioStatusIcon">🔊</span> <span id="audioStatusText">Activado</span>
+                    </button>
+                </div>
+                
+                <div class="setting-item">
+                    <span>Tema LCD:</span>
+                    <div class="theme-selector">
+                        <div class="theme-dot td-green selected" onclick="changeTheme('green', this)" title="Verde Clásico"></div>
+                        <div class="theme-dot td-blue" onclick="changeTheme('blue', this)" title="Azul Light"></div>
+                        <div class="theme-dot td-amber" onclick="changeTheme('amber', this)" title="Ámbar Retro"></div>
+                        <div class="theme-dot td-grey" onclick="changeTheme('grey', this)" title="Gris Nokia"></div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 15px;"><span>CONTROLES</span></h2>
+            <div class="controls-list">
+                <div class="control-row">
+                    <span>Direcciones:</span>
+                    <span class="control-key">↑ ↓ ← →</span>
+                </div>
+                <div class="control-row">
+                    <span>Teclado Nokia:</span>
+                    <span class="control-key">2, 4, 6, 8</span>
+                </div>
+                <div class="control-row">
+                    <span>Pausar / Volver:</span>
+                    <span class="control-key">Enter / Esc</span>
+                </div>
+                <div class="control-row">
+                    <span>Alternativo:</span>
+                    <span class="control-key">W A S D</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL CENTRAL: El Celular Nokia 3310 -->
+        <div class="phone-container">
+            <div class="nokia-phone">
+                <!-- Altavoz -->
+                <div class="speaker-grille"></div>
+                
+                <!-- Logo Nokia -->
+                <div class="nokia-brand">NOKIA</div>
+                
+                <!-- Bisel de la Pantalla -->
+                <div class="screen-bezel">
+                    <!-- Pantalla LCD -->
+                    <div class="lcd-display">
+                        <div class="lcd-glare"></div>
+                        <div class="lcd-scanlines"></div>
+                        <canvas id="gameCanvas" width="224" height="160"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Botonera -->
+                <div class="keypad">
+                    <!-- Botones de Navegación Superiores -->
+                    <div class="nav-keys">
+                        <button class="phone-btn c-btn" id="nokiaBtnClear" onclick="handleNokiaKey('Clear')" title="Atrás/Borrar">◀</button>
+                        <button class="phone-btn menu-btn" id="nokiaBtnMenu" onclick="handleNokiaKey('Menu')" title="Menú/Aceptar">MENU</button>
+                        <button class="phone-btn c-btn" id="nokiaBtnScroll" onclick="handleNokiaKey('Scroll')" style="border-radius: 15px 5px 12px 5px;" title="Navegar">▲▼</button>
+                    </div>
+                    
+                    <!-- Teclado Numérico -->
+                    <div class="num-keys">
+                        <button class="phone-btn num-btn" onclick="handleNokiaKey('1')">
+                            <span class="big-num">1</span><span class="sub-text">o_o</span>
+                        </button>
+                        <button class="phone-btn num-btn arrow-btn num-btn-2" onclick="handleNokiaKey('2')">
+                            <span class="big-num">2</span><span class="sub-text">abc</span>
+                        </button>
+                        <button class="phone-btn num-btn" onclick="handleNokiaKey('3')">
+                            <span class="big-num">3</span><span class="sub-text">def</span>
+                        </button>
+                        
+                        <button class="phone-btn num-btn arrow-btn num-btn-4" onclick="handleNokiaKey('4')">
+                            <span class="big-num">4</span><span class="sub-text">ghi</span>
+                        </button>
+                        <button class="phone-btn num-btn" onclick="handleNokiaKey('5')">
+                            <span class="big-num">5</span><span class="sub-text">jkl</span>
+                        </button>
+                        <button class="phone-btn num-btn arrow-btn num-btn-6" onclick="handleNokiaKey('6')">
+                            <span class="big-num">6</span><span class="sub-text">mno</span>
+                        </button>
+                        
+                        <button class="phone-btn num-btn" onclick="handleNokiaKey('7')">
+                            <span class="big-num">7</span><span class="sub-text">pqrs</span>
+                        </button>
+                        <button class="phone-btn num-btn arrow-btn num-btn-8" onclick="handleNokiaKey('8')">
+                            <span class="big-num">8</span><span class="sub-text">tuv</span>
+                        </button>
+                        <button class="phone-btn num-btn" onclick="handleNokiaKey('9')">
+                            <span class="big-num">9</span><span class="sub-text">wxyz</span>
+                        </button>
+                        
+                        <button class="phone-btn num-btn" onclick="handleNokiaKey('*')">
+                            <span class="big-num">*</span><span class="sub-text">+</span>
+                        </button>
+                        <button class="phone-btn num-btn" onclick="handleNokiaKey('0')">
+                            <span class="big-num">0</span><span class="sub-text">_</span>
+                        </button>
+                        <button class="phone-btn num-btn" onclick="handleNokiaKey('#')">
+                            <span class="big-num">#</span><span class="sub-text">⇧</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL DERECHO: Tabla de Clasificación -->
+        <div class="side-panel">
+            <h2><span>RÉCORDS</span></h2>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%">Rank</th>
+                        <th style="width: 30%">Iniciales</th>
+                        <th style="width: 30%">Puntos</th>
+                        <th style="width: 25%">Nivel</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                    <!-- Registros insertados dinámicamente -->
+                </tbody>
+            </table>
+            <div style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px;">
+                Los mejores puntajes se guardan en el navegador.
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <div>Nokia 3310 Snake Classic - Recreado con HTML5 y Canvas</div>
+        <div>Para jugar, haz clic en la pantalla del celular o usa tu teclado físico.</div>
+    </footer>
+
+    <!-- LÓGICA DEL JUEGO -->
+    <script>
+        // --- SONIDO SYNTH (WEB AUDIO API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let audioEnabled = true;
+
+        function playSound(type) {
+            if (!audioEnabled) return;
+            
+            // Reanudar contexto de audio si estaba suspendido (requerimiento de navegadores)
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'tick') {
+                // Click suave de movimiento / teclado
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(450, now);
+                gainNode.gain.setValueAtTime(0.02, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+                osc.start(now);
+                osc.stop(now + 0.03);
+            } 
+            else if (type === 'eat') {
+                // Sonido de comer pieza (arpeggio alegre y corto)
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(659.25, now); // E5
+                osc.frequency.setValueAtTime(880.00, now + 0.06); // A5
+                gainNode.gain.setValueAtTime(0.04, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } 
+            else if (type === 'die') {
+                // Sonido de choque (onda decreciente de tono grave)
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.45);
+                gainNode.gain.setValueAtTime(0.08, now);
+                gainNode.gain.linearRampToValueAtTime(0.0001, now + 0.45);
+                osc.start(now);
+                osc.stop(now + 0.45);
+            } 
+            else if (type === 'levelup') {
+                // Subir nivel / aumentar velocidad
+                osc.type = 'sine';
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // Do, Mi, Sol, Do octava
+                notes.forEach((freq, idx) => {
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                });
+                gainNode.gain.setValueAtTime(0.04, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const btn = document.getElementById('audioToggle');
+            const icon = document.getElementById('audioStatusIcon');
+            const txt = document.getElementById('audioStatusText');
+            
+            if (audioEnabled) {
+                btn.classList.add('active');
+                icon.textContent = '🔊';
+                txt.textContent = 'Activado';
+                playSound('tick');
+            } else {
+                btn.classList.remove('active');
+                icon.textContent = '🔇';
+                txt.textContent = 'Silenciado';
+            }
+        }
+
+        // --- CONFIGURACIÓN DE PANTALLA Y RENDER ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Tamaño interno del canvas
+        const WIDTH = canvas.width;  // 224
+        const HEIGHT = canvas.height; // 160
+
+        // Tamaño de la cuadrícula de juego
+        // Para que se sienta retro, crearemos una cuadrícula de 28 columnas x 20 filas (cada bloque de 8x8 px)
+        const GRID_COLS = 28;
+        const GRID_ROWS = 20;
+        const CELL_SIZE = 8; // 28 * 8 = 224, 20 * 8 = 160
+
+        // --- ESTADOS DEL JUEGO ---
+        const STATES = {
+            SPLASH: 'splash',         // Pantalla inicial Nokia
+            MENU: 'menu',             // Menú principal
+            PLAYING: 'playing',       // Jugando
+            PAUSED: 'paused',         // Juego pausado
+            GAME_OVER: 'game_over',   // Has chocado
+            ENTER_INITIALS: 'enter_initials', // Introducir letras de récord
+            LEADERBOARD: 'leaderboard', // Ver mejores puntajes retro
+            CREDITS: 'credits'        // Créditos del autor
+        };
+
+        let gameState = STATES.SPLASH;
+
+        // Variables del juego
+        let snake = [];
+        let direction = { x: 1, y: 0 };
+        let nextDirection = { x: 1, y: 0 };
+        let food = { x: 0, y: 0 };
+        let foodBlink = true;
+        
+        let score = 0;
+        let level = 1;
+        let foodEatenCount = 0;
+        let baseDelay = 220; // velocidad base en ms
+        let currentDelay = 220;
+        let lastTickTime = 0;
+
+        // Para parpadeo general
+        let blinkCounter = 0;
+
+        // Variables de entrada de iniciales
+        let initials = ['A', 'A', 'A'];
+        let initialIndex = 0;
+        const CHAR_SET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?_ -";
+
+        // Estructura del menú
+        let menuSelectedIndex = 0;
+        const menuOptions = ["JUGAR", "RECORD", "CREDITOS"];
+
+        // --- SISTEMA DE RECORDS (LOCALSTORAGE) ---
+        let highScores = [];
+
+        function loadHighScores() {
+            try {
+                const stored = localStorage.getItem('nokia_snake_highscores');
+                if (stored) {
+                    highScores = JSON.parse(stored);
+                } else {
+                    // Datos iniciales falsos nostálgicos
+                    highScores = [
+                        { initials: 'NOK', score: 150, level: 5, date: '1999-12-31' },
+                        { initials: 'XYZ', score: 90, level: 3, date: '2000-05-15' },
+                        { initials: 'JON', score: 50, level: 2, date: '2002-09-10' }
+                    ];
+                    saveHighScores();
+                }
+            } catch (e) {
+                console.error("No se pudo cargar LocalStorage", e);
+            }
+            renderLeaderboardPanel();
+        }
+
+        function saveHighScores() {
+            try {
+                localStorage.setItem('nokia_snake_highscores', JSON.stringify(highScores));
+            } catch (e) {
+                console.error("No se pudo guardar LocalStorage", e);
+            }
+            renderLeaderboardPanel();
+        }
+
+        function isHighScore(scoreToCheck) {
+            if (highScores.length < 10) return true;
+            return scoreToCheck > highScores[highScores.length - 1].score;
+        }
+
+        function addHighScore(newInitials, newScore, newLevel) {
+            const today = new Date().toISOString().split('T')[0];
+            highScores.push({ initials: newInitials, score: newScore, level: newLevel, date: today });
+            // Ordenar de mayor a menor score
+            highScores.sort((a, b) => b.score - a.score);
+            // Quedarse con el top 10
+            if (highScores.length > 10) {
+                highScores.pop();
+            }
+            saveHighScores();
+        }
+
+        function renderLeaderboardPanel() {
+            const tbody = document.getElementById('leaderboardBody');
+            tbody.innerHTML = '';
+            
+            // Rellenar hasta 10 filas
+            for (let i = 0; i < 10; i++) {
+                const tr = document.createElement('tr');
+                if (i < 3) tr.classList.add('top-rank');
+                
+                if (i < highScores.length) {
+                    const row = highScores[i];
+                    tr.innerHTML = `
+                        <td><span class="rank-badge">${i + 1}</span></td>
+                        <td style="font-family: monospace; font-weight: bold; letter-spacing: 1px;">${row.initials}</td>
+                        <td style="font-weight: 600;">${row.score}</td>
+                        <td>Nivel ${row.level}</td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td><span class="rank-badge">${i + 1}</span></td>
+                        <td style="color: var(--text-muted)">---</td>
+                        <td style="color: var(--text-muted)">0</td>
+                        <td style="color: var(--text-muted)">-</td>
+                    `;
+                }
+                tbody.appendChild(tr);
+            }
+        }
+
+        // --- RENDERIZADO DEL CANVAS EN BLANCO Y NEGRO RETRO ---
+
+        // Obtener colores del CSS para dibujar en el Canvas de forma sincronizada
+        let colorFG = '#232d19';
+        let colorBG = '#8ba673';
+        let colorShadow = 'rgba(35, 45, 25, 0.15)';
+
+        function updateColorsFromTheme() {
+            const computedStyle = getComputedStyle(document.body);
+            colorFG = computedStyle.getPropertyValue('--lcd-fg').trim();
+            colorBG = computedStyle.getPropertyValue('--lcd-bg').trim();
+            colorShadow = computedStyle.getPropertyValue('--lcd-shadow').trim();
+        }
+
+        // Dibuja un rectángulo en el Canvas con sombra de píxel clásica
+        function drawPixelRect(x, y, w, h, fill = true) {
+            ctx.save();
+            // Dibujar sombra del píxel ligeramente desplazada (efecto LCD físico)
+            ctx.fillStyle = colorShadow;
+            if (fill) {
+                ctx.fillRect(x + 0.7, y + 0.7, w, h);
+            } else {
+                ctx.strokeRect(x + 0.7, y + 0.7, w, h);
+            }
+
+            // Dibujar el píxel real encima
+            ctx.fillStyle = colorFG;
+            ctx.strokeStyle = colorFG;
+            ctx.lineWidth = 1;
+            if (fill) {
+                ctx.fillRect(x, y, w, h);
+            } else {
+                ctx.strokeRect(x, y, w, h);
+            }
+            ctx.restore();
+        }
+
+        // Dibuja una rejilla de fondo de puntos inactivos muy tenues
+        function drawGridBackground() {
+            ctx.fillStyle = colorBG;
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+            ctx.fillStyle = colorFG;
+            ctx.globalAlpha = 0.05; // Extremadamente tenue
+            for (let c = 0; c < GRID_COLS; c++) {
+                for (let r = 0; r < GRID_ROWS; r++) {
+                    ctx.fillRect(c * CELL_SIZE + 3, r * CELL_SIZE + 3, 1, 1);
+                }
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        // Dibuja una celda del grid de juego
+        function drawCell(gridX, gridY, type) {
+            const px = gridX * CELL_SIZE;
+            const py = gridY * CELL_SIZE;
+
+            if (type === 'snake_head') {
+                // Cabeza de la serpiente (cuadrado relleno con detalle)
+                drawPixelRect(px + 1, py + 1, CELL_SIZE - 2, CELL_SIZE - 2, true);
+                
+                // Dibujar dos ojos pequeñitos (píxeles vacíos)
+                ctx.fillStyle = colorBG;
+                // Ajustar ojos según dirección
+                if (direction.y !== 0) {
+                    ctx.fillRect(px + 2, py + 3, 1, 1);
+                    ctx.fillRect(px + 5, py + 3, 1, 1);
+                } else {
+                    ctx.fillRect(px + 4, py + 2, 1, 1);
+                    ctx.fillRect(px + 4, py + 5, 1, 1);
+                }
+            } 
+            else if (type === 'snake_body') {
+                // Cuerpo con un hueco en el centro estilo Nokia
+                drawPixelRect(px + 1, py + 1, CELL_SIZE - 2, CELL_SIZE - 2, true);
+                ctx.fillStyle = colorBG;
+                ctx.fillRect(px + 3, py + 3, 2, 2);
+            } 
+            else if (type === 'food') {
+                // La pieza de comida (un patrón cruzado clásico en Nokia)
+                if (foodBlink) {
+                    drawPixelRect(px + 3, py + 1, 2, 6, true);
+                    drawPixelRect(px + 1, py + 3, 6, 2, true);
+                    // Hueco del centro
+                    ctx.fillStyle = colorBG;
+                    ctx.fillRect(px + 3, py + 3, 2, 2);
+                }
+            }
+        }
+
+        // Función para renderizar textos pixelados con estilo nostálgico
+        function drawRetroText(text, x, y, size = '1px', align = 'center') {
+            ctx.save();
+            ctx.font = `${size} "Press Start 2P", monospace`;
+            ctx.textAlign = align;
+            ctx.textBaseline = 'middle';
+
+            // Dibujar sombra
+            ctx.fillStyle = colorShadow;
+            ctx.fillText(text, x + 1, y + 1);
+
+            // Dibujar frente
+            ctx.fillStyle = colorFG;
+            ctx.fillText(text, x, y);
+            ctx.restore();
+        }
+
+        // Dibuja el marco de la pantalla (Línea de límite)
+        function drawScreenBorder() {
+            ctx.save();
+            ctx.strokeStyle = colorFG;
+            ctx.lineWidth = 1;
+            
+            // Dibujar rectángulo exterior
+            ctx.strokeRect(1, 1, WIDTH - 2, HEIGHT - 2);
+            // Doble borde estilo Nokia
+            ctx.strokeRect(3, 3, WIDTH - 6, HEIGHT - 6);
+            ctx.restore();
+        }
+
+        // --- SISTEMA DE MENÚS Y RENDER GENERAL ---
+
+        function drawGame() {
+            // Limpiar con el fondo LCD
+            ctx.fillStyle = colorBG;
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+            if (gameState === STATES.SPLASH) {
+                drawGridBackground();
+                drawScreenBorder();
+                drawRetroText("NOKIA", WIDTH / 2, HEIGHT / 2 - 25, '14px');
+                drawRetroText("SNAKE II", WIDTH / 2, HEIGHT / 2 - 5, '10px');
+                
+                if (blinkCounter % 2 === 0) {
+                    drawRetroText("[ PULSA MENU ]", WIDTH / 2, HEIGHT / 2 + 30, '7px');
+                }
+                drawRetroText("© 1999 NOKIA CORP.", WIDTH / 2, HEIGHT - 20, '6px');
+            } 
+            else if (gameState === STATES.MENU) {
+                drawGridBackground();
+                drawScreenBorder();
+                drawRetroText("- MENU -", WIDTH / 2, 20, '9px');
+
+                // Renderizar opciones del menú
+                for (let i = 0; i < menuOptions.length; i++) {
+                    const optionY = 55 + i * 25;
+                    let text = menuOptions[i];
+                    if (i === menuSelectedIndex) {
+                        text = `> ${text} <`;
+                        // Dibujar una barra oscura detrás del texto seleccionado
+                        ctx.fillStyle = colorFG;
+                        ctx.globalAlpha = 0.15;
+                        ctx.fillRect(15, optionY - 10, WIDTH - 30, 20);
+                        ctx.globalAlpha = 1.0;
+                        
+                        drawRetroText(text, WIDTH / 2, optionY, '10px');
+                    } else {
+                        drawRetroText(text, WIDTH / 2, optionY, '8px');
+                    }
+                }
+                drawRetroText("▲▼: NAV   MENU: OK", WIDTH / 2, HEIGHT - 18, '6px');
+            } 
+            else if (gameState === STATES.PLAYING || gameState === STATES.PAUSED) {
+                // Fondo
+                drawGridBackground();
+                
+                // Bordes del mapa de juego (los bordes reales son infranqueables)
+                // Dejamos la fila superior de píxeles libre para la interfaz de puntuación
+                ctx.save();
+                ctx.strokeStyle = colorFG;
+                ctx.lineWidth = 1;
+                // Borde de la zona de juego: de y=16 a y=HEIGHT-1
+                ctx.strokeRect(0, 16, WIDTH, HEIGHT - 16);
+                ctx.restore();
+
+                // Dibujar Serpiente
+                snake.forEach((part, index) => {
+                    drawCell(part.x, part.y, index === 0 ? 'snake_head' : 'snake_body');
+                });
+
+                // Dibujar Comida
+                drawCell(food.x, food.y, 'food');
+
+                // Dibujar Interfaz Superior (Score & Level)
+                ctx.save();
+                ctx.fillStyle = colorFG;
+                ctx.fillRect(0, 0, WIDTH, 16);
+                ctx.fillStyle = colorBG;
+                ctx.fillRect(1, 1, WIDTH - 2, 14);
+                ctx.restore();
+
+                drawRetroText(`PTS:${score}`, 8, 8, '7px', 'left');
+                drawRetroText(`NIV:${level}`, WIDTH - 8, 8, '7px', 'right');
+
+                if (gameState === STATES.PAUSED) {
+                    // Cartelera de Pausa
+                    ctx.fillStyle = colorBG;
+                    ctx.fillRect(WIDTH / 2 - 50, HEIGHT / 2 - 15, 100, 30);
+                    ctx.strokeStyle = colorFG;
+                    ctx.strokeRect(WIDTH / 2 - 50, HEIGHT / 2 - 15, 100, 30);
+                    
+                    drawRetroText("PAUSA", WIDTH / 2, HEIGHT / 2, '9px');
+                }
+            } 
+            else if (gameState === STATES.GAME_OVER) {
+                drawGridBackground();
+                drawScreenBorder();
+                drawRetroText("¡FIN JUEGO!", WIDTH / 2, HEIGHT / 2 - 30, '12px');
+                drawRetroText(`PUNTAJE: ${score}`, WIDTH / 2, HEIGHT / 2 - 5, '9px');
+
+                if (isHighScore(score)) {
+                    if (blinkCounter % 2 === 0) {
+                        drawRetroText("¡NUEVO RECORD!", WIDTH / 2, HEIGHT / 2 + 18, '8px');
+                    }
+                    drawRetroText("PULSA MENU GRABAR", WIDTH / 2, HEIGHT / 2 + 38, '6px');
+                } else {
+                    if (blinkCounter % 2 === 0) {
+                        drawRetroText("PULSA C / MENÚ", WIDTH / 2, HEIGHT / 2 + 25, '8px');
+                    }
+                }
+            } 
+            else if (gameState === STATES.ENTER_INITIALS) {
+                drawGridBackground();
+                drawScreenBorder();
+                drawRetroText("NUEVO RECORD", WIDTH / 2, 20, '10px');
+                drawRetroText("PON TU NOMBRE:", WIDTH / 2, 45, '7px');
+
+                // Dibujar Iniciales
+                const initXStart = WIDTH / 2 - 45;
+                for (let i = 0; i < 3; i++) {
+                    const x = initXStart + i * 35;
+                    const y = 85;
+
+                    drawRetroText(initials[i], x, y, '18px');
+
+                    // Dibujar cursor que parpadea
+                    if (i === initialIndex && blinkCounter % 2 === 0) {
+                        ctx.fillStyle = colorFG;
+                        ctx.fillRect(x - 10, y + 12, 20, 2);
+                    }
+                }
+
+                drawRetroText("▲▼: CAMBIAR  ▶: CONFIRMAR", WIDTH / 2, 130, '6px');
+            } 
+            else if (gameState === STATES.LEADERBOARD) {
+                drawGridBackground();
+                drawScreenBorder();
+                drawRetroText("MEJORES SCORES", WIDTH / 2, 20, '9px');
+
+                // Mostrar el top 4 en la pequeña pantalla Nokia
+                for (let i = 0; i < 4; i++) {
+                    const rowY = 48 + i * 22;
+                    if (i < highScores.length) {
+                        const s = highScores[i];
+                        drawRetroText(`${i+1}.${s.initials}  ${s.score}pts  N.${s.level}`, WIDTH / 2, rowY, '7px');
+                    } else {
+                        drawRetroText(`${i+1}.---   0pts  N.-`, WIDTH / 2, rowY, '7px');
+                    }
+                }
+
+                drawRetroText("PULSA ATRAS VOLVER", WIDTH / 2, HEIGHT - 18, '6px');
+            }
+            else if (gameState === STATES.CREDITS) {
+                drawGridBackground();
+                drawScreenBorder();
+                drawRetroText("CREDITOS", WIDTH / 2, 20, '10px');
+                drawRetroText("CREADO POR:", WIDTH / 2, 50, '7px');
+                drawRetroText("GUILLE", WIDTH / 2, 70, '11px');
+                drawRetroText("AGENTE GEMINI 3.5", WIDTH / 2, 95, '7px');
+                drawRetroText("PULSA ATRAS VOLVER", WIDTH / 2, HEIGHT - 18, '6px');
+            }
+        }
+
+        // --- LÓGICA DE JUEGO & ENGINE ---
+
+        function initGame() {
+            // Posicionar la serpiente al centro
+            snake = [
+                { x: 10, y: 10 },
+                { x: 9, y: 10 },
+                { x: 8, y: 10 }
+            ];
+            direction = { x: 1, y: 0 };
+            nextDirection = { x: 1, y: 0 };
+            score = 0;
+            level = 1;
+            foodEatenCount = 0;
+            currentDelay = baseDelay;
+            initials = ['A', 'A', 'A'];
+            initialIndex = 0;
+            
+            spawnFood();
+        }
+
+        function spawnFood() {
+            let valid = false;
+            let fx, fy;
+
+            while (!valid) {
+                // Zona de juego libre de y=2 a y=19. (y=0,1 es la barra superior)
+                fx = Math.floor(Math.random() * GRID_COLS);
+                fy = Math.floor(Math.random() * (GRID_ROWS - 2)) + 2; 
+
+                // Comprobar que no spawnee sobre el cuerpo de la serpiente
+                valid = true;
+                for (let i = 0; i < snake.length; i++) {
+                    if (snake[i].x === fx && snake[i].y === fy) {
+                        valid = false;
+                        break;
+                    }
+                }
+            }
+            food = { x: fx, y: fy };
+        }
+
+        function gameTick() {
+            if (gameState !== STATES.PLAYING) return;
+
+            direction = nextDirection;
+            
+            // Siguiente cabeza
+            const head = snake[0];
+            const newHead = {
+                x: head.x + direction.x,
+                y: head.y + direction.y
+            };
+
+            // Comprobar Colisión con Bordes (Los límites son infranqueables)
+            if (newHead.x < 0 || newHead.x >= GRID_COLS || newHead.y < 2 || newHead.y >= GRID_ROWS) {
+                handleCrash();
+                return;
+            }
+
+            // Comprobar Auto-Colisión
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === newHead.x && snake[i].y === newHead.y) {
+                    handleCrash();
+                    return;
+                }
+            }
+
+            // Añadir nueva cabeza
+            snake.unshift(newHead);
+
+            // Comprobar si come
+            if (newHead.x === food.x && newHead.y === food.y) {
+                // Aumentar puntaje
+                score += 10 * level;
+                foodEatenCount++;
+                playSound('eat');
+                spawnFood();
+
+                // Incremento progresivo de velocidad cada 5 piezas recogidas
+                if (foodEatenCount % 5 === 0) {
+                    level++;
+                    // Reducir retardo en 18ms por nivel, tope en 50ms mínimo
+                    currentDelay = Math.max(50, baseDelay - (level - 1) * 18);
+                    playSound('levelup');
+                }
+            } else {
+                // Remover cola si no comió
+                snake.pop();
+            }
+        }
+
+        function handleCrash() {
+            playSound('die');
+            gameState = STATES.GAME_OVER;
+        }
+
+        // Loop de tiempo de juego y render
+        function mainLoop(timestamp) {
+            // Manejar lógica del juego a intervalo dinámico de delay
+            if (gameState === STATES.PLAYING) {
+                if (!lastTickTime) lastTickTime = timestamp;
+                const elapsed = timestamp - lastTickTime;
+                
+                if (elapsed >= currentDelay) {
+                    gameTick();
+                    lastTickTime = timestamp;
+                }
+            }
+
+            // Manejo de parpadeo visual (cada ~250ms)
+            if (!this.lastBlinkTime) this.lastBlinkTime = timestamp;
+            if (timestamp - this.lastBlinkTime > 250) {
+                blinkCounter++;
+                foodBlink = !foodBlink;
+                this.lastBlinkTime = timestamp;
+            }
+
+            drawGame();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- ENTRADA DE TECLADO Y BOTONERA ---
+
+        // Control de teclado físico
+        document.addEventListener('keydown', (e) => {
+            let key = e.key;
+
+            // Prevenir scroll de la ventana al usar flechas o espacio en la web
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].indexOf(key) > -1) {
+                e.preventDefault();
+            }
+
+            handleInput(key);
+        });
+
+        // Simula la pulsación del teclado nokia clásico
+        function handleNokiaKey(keyLabel) {
+            playSound('tick');
+            
+            // Traducir teclas físicas del Nokia a comandos del juego
+            if (keyLabel === '2') handleInput('ArrowUp');
+            else if (keyLabel === '8') handleInput('ArrowDown');
+            else if (keyLabel === '4') handleInput('ArrowLeft');
+            else if (keyLabel === '6') handleInput('ArrowRight');
+            else if (keyLabel === 'Menu') handleInput('Enter');
+            else if (keyLabel === 'Clear') handleInput('Escape');
+            else if (keyLabel === 'Scroll') {
+                // El botón scroll en la splash/menu actúa como bajar/subir
+                if (gameState === STATES.MENU) {
+                    menuSelectedIndex = (menuSelectedIndex + 1) % menuOptions.length;
+                } else if (gameState === STATES.ENTER_INITIALS) {
+                    // Cambia de inicial
+                    cycleInitialChar(1);
+                } else if (gameState === STATES.PLAYING) {
+                    handleInput('Escape'); // Pausar
+                }
+            }
+        }
+
+        function handleInput(key) {
+            // Normalizar a minúsculas para teclas normales
+            const normalizedKey = key.toLowerCase();
+
+            // 1. INPUT DURANTE PANTALLA INICIAL (SPLASH)
+            if (gameState === STATES.SPLASH) {
+                if (key === 'Enter' || key === ' ' || normalizedKey === 'escape' || normalizedKey === 'menu' || normalizedKey === 'clear') {
+                    playSound('tick');
+                    gameState = STATES.MENU;
+                }
+                return;
+            }
+
+            // 2. INPUT DURANTE MENÚ PRINCIPAL
+            if (gameState === STATES.MENU) {
+                if (key === 'ArrowUp' || normalizedKey === 'w') {
+                    playSound('tick');
+                    menuSelectedIndex = (menuSelectedIndex - 1 + menuOptions.length) % menuOptions.length;
+                } 
+                else if (key === 'ArrowDown' || normalizedKey === 's') {
+                    playSound('tick');
+                    menuSelectedIndex = (menuSelectedIndex + 1) % menuOptions.length;
+                } 
+                else if (key === 'Enter' || key === ' ') {
+                    playSound('tick');
+                    selectMenuOption();
+                }
+                else if (key === 'Escape' || normalizedKey === 'escape') {
+                    playSound('tick');
+                    gameState = STATES.SPLASH;
+                }
+                return;
+            }
+
+            // 3. INPUT DURANTE JUEGO (JUGANDO O PAUSADO)
+            if (gameState === STATES.PLAYING) {
+                if ((key === 'ArrowUp' || normalizedKey === 'w') && direction.y !== 1) {
+                    nextDirection = { x: 0, y: -1 };
+                } 
+                else if ((key === 'ArrowDown' || normalizedKey === 's') && direction.y !== -1) {
+                    nextDirection = { x: 0, y: 1 };
+                } 
+                else if ((key === 'ArrowLeft' || normalizedKey === 'a') && direction.x !== 1) {
+                    nextDirection = { x: -1, y: 0 };
+                } 
+                else if ((key === 'ArrowRight' || normalizedKey === 'd') && direction.x !== -1) {
+                    nextDirection = { x: 1, y: 0 };
+                } 
+                else if (key === 'Escape' || key === 'Enter') {
+                    // Pausar juego
+                    playSound('tick');
+                    gameState = STATES.PAUSED;
+                }
+            } 
+            else if (gameState === STATES.PAUSED) {
+                if (key === 'Escape' || key === 'Enter') {
+                    playSound('tick');
+                    gameState = STATES.PLAYING;
+                    lastTickTime = 0; // reset ticks
+                }
+            }
+
+            // 4. INPUT DURANTE GAME OVER
+            if (gameState === STATES.GAME_OVER) {
+                if (key === 'Enter' || key === ' ') {
+                    playSound('tick');
+                    if (isHighScore(score)) {
+                        initials = ['A', 'A', 'A'];
+                        initialIndex = 0;
+                        gameState = STATES.ENTER_INITIALS;
+                    } else {
+                        gameState = STATES.MENU;
+                    }
+                } 
+                else if (key === 'Escape') {
+                    playSound('tick');
+                    gameState = STATES.MENU;
+                }
+                return;
+            }
+
+            // 5. INPUT DURANTE INTRODUCCIÓN DE INICIALES
+            if (gameState === STATES.ENTER_INITIALS) {
+                if (key === 'ArrowUp' || normalizedKey === 'w') {
+                    playSound('tick');
+                    cycleInitialChar(1);
+                } 
+                else if (key === 'ArrowDown' || normalizedKey === 's') {
+                    playSound('tick');
+                    cycleInitialChar(-1);
+                } 
+                else if (key === 'ArrowRight' || key === 'Enter' || normalizedKey === 'd') {
+                    playSound('tick');
+                    if (initialIndex < 2) {
+                        initialIndex++;
+                    } else {
+                        // Confirmar todas las iniciales
+                        const finalInitials = initials.join('');
+                        addHighScore(finalInitials, score, level);
+                        gameState = STATES.LEADERBOARD;
+                    }
+                } 
+                else if (key === 'ArrowLeft' || key === 'Backspace' || normalizedKey === 'a') {
+                    playSound('tick');
+                    if (initialIndex > 0) {
+                        initialIndex--;
+                    }
+                }
+                return;
+            }
+
+            // 6. INPUT EN LEADERBOARD RETRO
+            if (gameState === STATES.LEADERBOARD) {
+                if (key === 'Escape' || key === 'Enter' || key === 'Backspace') {
+                    playSound('tick');
+                    gameState = STATES.MENU;
+                }
+                return;
+            }
+
+            // 7. INPUT EN CREDITS
+            if (gameState === STATES.CREDITS) {
+                if (key === 'Escape' || key === 'Enter' || key === 'Backspace') {
+                    playSound('tick');
+                    gameState = STATES.MENU;
+                }
+                return;
+            }
+        }
+
+        // Selección de opciones de Menú
+        function selectMenuOption() {
+            if (menuSelectedIndex === 0) {
+                // Jugar
+                initGame();
+                gameState = STATES.PLAYING;
+                lastTickTime = 0;
+            } 
+            else if (menuSelectedIndex === 1) {
+                // Leaderboard
+                gameState = STATES.LEADERBOARD;
+            } 
+            else if (menuSelectedIndex === 2) {
+                // Créditos
+                gameState = STATES.CREDITS;
+            }
+        }
+
+        // Cicla caracteres de A-Z, 0-9
+        function cycleInitialChar(dir) {
+            let curChar = initials[initialIndex];
+            let idx = CHAR_SET.indexOf(curChar);
+            if (idx === -1) idx = 0;
+
+            idx = (idx + dir + CHAR_SET.length) % CHAR_SET.length;
+            initials[initialIndex] = CHAR_SET[idx];
+        }
+
+        // --- SISTEMAS DE TEMAS Y AUDIO ---
+
+        function changeTheme(themeName, el) {
+            playSound('tick');
+            // Quitar clase seleccionada a otros
+            document.querySelectorAll('.theme-dot').forEach(dot => dot.classList.remove('selected'));
+            el.classList.add('selected');
+
+            // Cambiar clase en el body
+            document.body.className = '';
+            document.body.classList.add(`theme-${themeName}`);
+
+            // Actualizar variables en JS tras repaint
+            setTimeout(updateColorsFromTheme, 50);
+        }
+
+        // --- INICIALIZACIÓN AL CARGAR ---
+        window.addEventListener('load', () => {
+            loadHighScores();
+            updateColorsFromTheme();
+            // Iniciar el render loop
+            requestAnimationFrame(mainLoop);
+        });
+    </script>
+</body>
+</html>

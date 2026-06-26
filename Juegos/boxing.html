@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atari 2600 Boxing (1980) Clone</title>
+    <!-- Fuentes retro y modernas de Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #121824;
+            --card-bg: rgba(22, 30, 49, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-color: #ff9f1c;
+            --accent-glow: rgba(255, 159, 28, 0.4);
+            --text-color: #e2e8f0;
+            --text-muted: #94a3b8;
+            --wood-gradient: linear-gradient(180deg, #5c3a21 0%, #3d2314 100%);
+            --console-black: #1a1a1a;
+            --tv-screen-bg: #808878; /* Color fósforo apagado */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at center, #1e293b 0%, var(--bg-color) 100%);
+            min-height: 100vh;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        /* Rejilla retro neon */
+        .ambient-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 159, 28, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 159, 28, 0.015) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-position: center;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Contenedor principal */
+        .wrapper {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        /* Paneles laterales */
+        .side-panel {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 24px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 340px;
+        }
+
+        .side-panel h2 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 10px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .side-panel h2 span {
+            color: var(--accent-color);
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* Lista de controles */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .control-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 4px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .key-badge {
+            background: #2a344d;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-bottom: 3px solid rgba(255, 255, 255, 0.25);
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 11px;
+            color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Configuración de Sonido y Temas */
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .toggle-btn {
+            background: #2a344d;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn:hover {
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .toggle-btn.active {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* --- CONSOLA ATARI Y CRT TV --- */
+        .console-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            min-width: 480px;
+        }
+
+        /* Mueble de Madera de la TV (Console Box) */
+        .tv-cabinet {
+            background: var(--wood-gradient);
+            border-radius: 30px;
+            padding: 24px;
+            box-shadow: 
+                0 30px 60px rgba(0, 0, 0, 0.8),
+                inset 0 4px 6px rgba(255, 255, 255, 0.1),
+                inset 0 -10px 20px rgba(0, 0, 0, 0.6);
+            border: 6px solid #2e1b10;
+            width: 100%;
+            max-width: 540px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Chasis frontal de plástico negro de la TV */
+        .tv-bezel {
+            background: #151515;
+            border-radius: 20px;
+            padding: 20px 25px 25px 25px;
+            border: 4px solid #0a0a0a;
+            box-shadow: 
+                inset 0 5px 15px rgba(0, 0, 0, 0.9),
+                0 2px 4px rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+        }
+
+        /* Pantalla CRT Curvada */
+        .crt-screen-wrapper {
+            width: 100%;
+            height: 320px;
+            background: #000;
+            border-radius: 40px / 30px;
+            overflow: hidden;
+            border: 10px solid #222;
+            box-shadow: 
+                inset 0 10px 20px rgba(0,0,0,0.8),
+                0 4px 8px rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        /* Glare/Brillo del cristal de la CRT */
+        .crt-glare {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 65%);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Líneas de escaneo y máscara de fósforo */
+        .crt-scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0.15) 50%, rgba(0, 0, 0, 0) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 9;
+        }
+
+        /* Parpadeo sutil CRT */
+        .crt-flicker {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.015);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 8;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.1; }
+            50% { opacity: 0.25; }
+            100% { opacity: 0.1; }
+        }
+
+        /* Panel de Controles de la TV (Diales y rejilla de ventilación) */
+        .tv-controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1f1f1f;
+            border-radius: 12px;
+            padding: 10px 15px;
+            border: 2px solid #0f0f0f;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .tv-brand {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            color: #555;
+            letter-spacing: 1px;
+        }
+
+        .tv-grille {
+            display: flex;
+            gap: 3px;
+            height: 12px;
+        }
+
+        .grille-bar {
+            width: 3px;
+            height: 100%;
+            background: #0f0f0f;
+            border-radius: 1px;
+        }
+
+        .tv-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff3b30;
+            box-shadow: 0 0 8px #ff3b30;
+            transition: all 0.3s ease;
+        }
+
+        .tv-indicator.off {
+            background: #333;
+            box-shadow: none;
+        }
+
+        /* Panel inferior de la Consola Atari (Switches de Palanca) */
+        .atari-console-panel {
+            background: #111;
+            border-radius: 15px;
+            border: 4px solid #080808;
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.8);
+        }
+
+        /* Palancas de la consola */
+        .console-switch-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .switch-label {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 7px;
+            color: #888;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .lever-switch {
+            width: 20px;
+            height: 38px;
+            background: #252525;
+            border-radius: 4px;
+            border: 2px solid #050505;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .lever-switch::after {
+            content: '';
+            position: absolute;
+            left: 2px;
+            width: 12px;
+            height: 16px;
+            background: radial-gradient(circle, #e2e8f0 0%, #94a3b8 100%);
+            border: 1px solid #475569;
+            border-radius: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Posiciones del switch (arriba / abajo) */
+        .lever-switch.up::after {
+            top: 2px;
+        }
+
+        .lever-switch.down::after {
+            bottom: 2px;
+        }
+
+        /* Botón de Reset clásico (Rojo) */
+        .atari-btn-red {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(180deg, #ff453a 0%, #bf1f1f 100%);
+            border: 2px solid #330000;
+            border-radius: 4px;
+            box-shadow: 
+                0 3px 5px rgba(0,0,0,0.5),
+                inset 0 1px 1px rgba(255,255,255,0.4);
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+
+        .atari-btn-red:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        }
+
+        /* Créditos */
+        footer {
+            margin-top: 30px;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 1100px) {
+            .wrapper {
+                flex-direction: column;
+                align-items: center;
+                gap: 25px;
+            }
+
+            .side-panel {
+                width: 100%;
+                max-width: 480px;
+            }
+
+            .console-container {
+                order: -1;
+                width: 100%;
+                min-width: 100%;
+            }
+        }
+
+        @media (max-width: 520px) {
+            body {
+                padding: 10px;
+            }
+            .tv-cabinet {
+                transform: scale(0.9);
+                margin: -20px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-grid"></div>
+
+    <div class="wrapper">
+        
+        <!-- PANEL IZQUIERDO: Controles y Reglas -->
+        <div class="side-panel">
+            <h2><span>CONTROLES</span></h2>
+            
+            <div class="control-group">
+                <div class="control-title">JUGADOR 1 (Blanco)</div>
+                <div class="control-row">
+                    <span>Moverse:</span>
+                    <span class="key-badge">W A S D</span>
+                </div>
+                <div class="control-row">
+                    <span>Puño Izquierdo:</span>
+                    <span class="key-badge">J</span>
+                </div>
+                <div class="control-row">
+                    <span>Puño Derecho:</span>
+                    <span class="key-badge">K</span>
+                </div>
+            </div>
+
+            <div class="control-group" id="p2ControlsGroup" style="opacity: 0.5;">
+                <div class="control-title">JUGADOR 2 (Negro)</div>
+                <div class="control-row">
+                    <span>Moverse:</span>
+                    <span class="key-badge">↑ ↓ ← →</span>
+                </div>
+                <div class="control-row">
+                    <span>Puño Izquierdo:</span>
+                    <span class="key-badge">1</span> / <span class="key-badge">,</span>
+                </div>
+                <div class="control-row">
+                    <span>Puño Derecho:</span>
+                    <span class="key-badge">2</span> / <span class="key-badge">.</span>
+                </div>
+            </div>
+
+            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                * En modo Local PVP se activa el Jugador 2. Se soporta el teclado numérico o la coma/punto para los puños del J2.
+            </div>
+        </div>
+
+        <!-- PANEL CENTRAL: El Mueble TV / Atari -->
+        <div class="console-container">
+            <div class="tv-cabinet">
+                <!-- Chasis TV -->
+                <div class="tv-bezel">
+                    <!-- Pantalla CRT -->
+                    <div class="crt-screen-wrapper" onclick="focusGame()">
+                        <div class="crt-glare"></div>
+                        <div class="crt-scanlines"></div>
+                        <div class="crt-flicker"></div>
+                        <canvas id="gameCanvas" width="160" height="120"></canvas>
+                    </div>
+
+                    <!-- Panel de Altavoz y LED -->
+                    <div class="tv-controls-bar">
+                        <div class="tv-grille">
+                            <div class="grille-bar"></div>
+                            <div class="grille-bar"></div>
+                            <div class="grille-bar"></div>
+                            <div class="grille-bar"></div>
+                            <div class="grille-bar"></div>
+                        </div>
+                        <div class="tv-brand">VIDEO COMPUTER SYSTEM</div>
+                        <div class="tv-indicator" id="powerLed"></div>
+                    </div>
+                </div>
+
+                <!-- Consola Atari Control Panel -->
+                <div class="atari-console-panel">
+                    <!-- Switch 1: Tipo Juego -->
+                    <div class="console-switch-group">
+                        <span class="switch-label">GAME<br>SELECT</span>
+                        <div class="lever-switch up" id="gameModeSwitch" onclick="toggleGameMode()" title="Cambiar Modo de Juego"></div>
+                        <span class="switch-label" id="gameModeLabel" style="color: var(--accent-color);">VS CPU</span>
+                    </div>
+
+                    <!-- Switch 2: Dificultad AI -->
+                    <div class="console-switch-group">
+                        <span class="switch-label">CPU<br>DIFF</span>
+                        <div class="lever-switch up" id="diffSwitch" onclick="toggleDifficulty()" title="Cambiar Dificultad CPU"></div>
+                        <span class="switch-label" id="diffLabel">MEDIUM</span>
+                    </div>
+
+                    <!-- Switch 3: Sonido -->
+                    <div class="console-switch-group">
+                        <span class="switch-label">SOUND<br>SWITCH</span>
+                        <div class="lever-switch up" id="soundSwitch" onclick="toggleSound()" title="Activar/Silenciar Audio"></div>
+                        <span class="switch-label" id="soundLabel" style="color: var(--accent-color);">AUDIO ON</span>
+                    </div>
+
+                    <!-- Switch 4: Botón Reset -->
+                    <div class="console-switch-group">
+                        <span class="switch-label">GAME<br>RESET</span>
+                        <button class="atari-btn-red" onclick="resetGame()" title="Reiniciar Partida"></button>
+                        <span class="switch-label">START</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL DERECHO: Instrucciones Atari -->
+        <div class="side-panel">
+            <h2><span>REGLAS ATARI</span></h2>
+            
+            <div class="control-group" style="font-size: 13px; line-height: 1.5; gap: 8px;">
+                <p>🥊 <strong>Objetivo</strong>: Logra conectar la mayor cantidad de golpes en el oponente dentro del tiempo límite o alcanza 100 puntos para un <strong>K.O. (Nocaut)</strong>.</p>
+                <p>📏 <strong>Puntuación</strong>: 
+                   <br>• Golpe a distancia (Jab): <strong>1 punto</strong>.
+                   <br>• Gancho limpio (Cuerpo a cuerpo): <strong>2 puntos</strong>.
+                </p>
+                <p>🧱 <strong>Las Cuerdas</strong>: Acorrala a tu oponente contra los bordes del ring para aturdirlo e infligir combos rápidos sin que pueda retroceder.</p>
+                <p>⏱️ <strong>Tiempo</strong>: Cada round dura <strong>2:00 minutos</strong> de acción continua retro.</p>
+            </div>
+
+            <h2><span>AJUSTES</span></h2>
+            <div class="setting-row">
+                <span>Pantalla CRT:</span>
+                <button class="toggle-btn active" id="crtToggle" onclick="toggleCRT()">Activado</button>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        Atari 2600 Boxing Clone (1980) - Recreado con HTML5 y Canvas. Haz clic en la pantalla del televisor para asegurar el foco del teclado.
+    </footer>
+
+    <!-- CODIGO DEL JUEGO -->
+    <script>
+        // --- EMULACIÓN SONIDO TIA (WEB AUDIO API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let soundEnabled = true;
+
+        function playRetroSound(type) {
+            if (!soundEnabled) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const now = audioCtx.currentTime;
+            
+            if (type === 'miss') {
+                // Golpe fallido (ruido sordo rápido)
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.linearRampToValueAtTime(0.0001, now + 0.08);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } 
+            else if (type === 'hit1') {
+                // Golpe simple (1 punto): Ruido distorsionado de Atari
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.setValueAtTime(90, now + 0.04);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.linearRampToValueAtTime(0.0001, now + 0.1);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } 
+            else if (type === 'hit2') {
+                // Golpe fuerte (2 puntos): Explosión de baja frecuencia
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.0001, now + 0.18);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.18);
+            } 
+            else if (type === 'bell') {
+                // Campana del Ring (Arpegio metálico agudo)
+                const osc1 = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(880, now);
+                osc1.frequency.setValueAtTime(880, now + 0.15);
+                
+                osc2.type = 'square';
+                osc2.frequency.setValueAtTime(885, now);
+                
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.setValueAtTime(0.1, now + 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+                
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.6);
+                osc2.stop(now + 0.6);
+            }
+            else if (type === 'ko') {
+                // Sirena Atari descendente para Knockout / Fin del Juego
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                
+                // Generar chirrido clásico descendente
+                for (let i = 0; i < 10; i++) {
+                    const timeOffset = i * 0.08;
+                    const freq = 600 - i * 50;
+                    osc.frequency.setValueAtTime(freq, now + timeOffset);
+                }
+                
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.linearRampToValueAtTime(0.0001, now + 0.8);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.8);
+            }
+        }
+
+        // --- SISTEMA DEL CANVAS ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Resoluciones originales de Atari 2600 (NTSC) aproximada a 160x120 para mantener aspecto pixelado perfecto
+        const WIDTH = 160;
+        const HEIGHT = 120;
+
+        // Limites del Ring (Cuerdas de boxeo)
+        const RING_MIN_X = 20;
+        const RING_MAX_X = 140;
+        const RING_MIN_Y = 24;
+        const RING_MAX_Y = 106;
+
+        // Modos de Juego
+        const MODES = {
+            SPLASH: 'splash',
+            PLAYING: 'playing',
+            FINISHED: 'finished'
+        };
+        let gameState = MODES.SPLASH;
+
+        // Selección de juego y dificultad (switches)
+        const GAME_TYPES = {
+            VS_CPU: 0,
+            PVP: 1,
+            CPU_VS_CPU: 2
+        };
+        let currentGameType = GAME_TYPES.VS_CPU;
+
+        const DIFF_LEVELS = {
+            EASY: 0,
+            MEDIUM: 1,
+            HARD: 2
+        };
+        let currentDifficulty = DIFF_LEVELS.MEDIUM;
+
+        // --- ENTIDADES DE BOXEADORES ---
+        class Boxer {
+            constructor(x, y, color, side) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.side = side; // 'left' o 'right'
+                this.score = 0;
+                
+                this.width = 12;  // Ancho hombros
+                this.height = 8;  // Espesor torso
+                this.radius = 6;  // Radio del cuerpo de colisión
+
+                // Estado de puños
+                this.leftFistExtended = false;
+                this.rightFistExtended = false;
+                this.punchTimer = 0;
+                this.punchMaxDuration = 6; // ticks de animación de puño
+
+                // Flinch/Daño al ser golpeado
+                this.flinchTimer = 0;
+                this.stunned = false;
+
+                // Ultimo puño utilizado para alternar si no se especifica
+                this.lastPunchRight = false;
+            }
+
+            reset(x, y, side) {
+                this.x = x;
+                this.y = y;
+                this.side = side;
+                this.score = 0;
+                this.leftFistExtended = false;
+                this.rightFistExtended = false;
+                this.punchTimer = 0;
+                this.flinchTimer = 0;
+                this.stunned = false;
+            }
+
+            punch(hand) {
+                if (this.punchTimer > 0 || this.flinchTimer > 0) return; // No puede golpear si ya golpea o está aturdido
+
+                playRetroSound('miss');
+                this.punchTimer = this.punchMaxDuration;
+                
+                if (hand === 'left') {
+                    this.leftFistExtended = true;
+                    this.rightFistExtended = false;
+                } else if (hand === 'right') {
+                    this.rightFistExtended = true;
+                    this.leftFistExtended = false;
+                } else {
+                    // Alternar puños por defecto si es una sola tecla
+                    if (this.lastPunchRight) {
+                        this.leftFistExtended = true;
+                        this.lastPunchRight = false;
+                    } else {
+                        this.rightFistExtended = true;
+                        this.lastPunchRight = true;
+                    }
+                }
+            }
+
+            update() {
+                // Manejar timer de puñetazo
+                if (this.punchTimer > 0) {
+                    this.punchTimer--;
+                    if (this.punchTimer === 0) {
+                        this.leftFistExtended = false;
+                        this.rightFistExtended = false;
+                    }
+                }
+
+                // Manejar timer de aturdimiento
+                if (this.flinchTimer > 0) {
+                    this.flinchTimer--;
+                    this.stunned = (this.flinchTimer > 0);
+                }
+            }
+
+            draw() {
+                ctx.save();
+                
+                // Efecto de parpadeo por flinch al ser golpeado
+                if (this.flinchTimer > 0 && Math.floor(this.flinchTimer / 2) % 2 === 0) {
+                    ctx.restore();
+                    return; // No se dibuja en este frame
+                }
+
+                // Determinar posición de los puños
+                let leftPunchOffset = 0;
+                let rightPunchOffset = 0;
+
+                if (this.leftFistExtended) {
+                    leftPunchOffset = 7; // Extensión del puño
+                }
+                if (this.rightFistExtended) {
+                    rightPunchOffset = 7;
+                }
+
+                ctx.fillStyle = this.color;
+
+                // Atari 2600 Sprites son planos y simétricos de arriba a abajo.
+                // Dibujamos el torso (hombros)
+                ctx.fillRect(this.x - 3, this.y - 5, 6, 10);
+
+                if (this.side === 'left') {
+                    // Boxeador mira hacia la DERECHA
+                    // Cabeza (píxel central)
+                    ctx.fillRect(this.x - 1, this.y - 2, 3, 4);
+
+                    // Puño Izquierdo (Arriba en la pantalla)
+                    ctx.fillRect(this.x + 3 + leftPunchOffset, this.y - 6, 3, 3);
+                    // Brazo Izquierdo
+                    if (this.leftFistExtended) {
+                        ctx.fillRect(this.x + 2, this.y - 5, leftPunchOffset + 1, 1);
+                    }
+
+                    // Puño Derecho (Abajo en la pantalla)
+                    ctx.fillRect(this.x + 3 + rightPunchOffset, this.y + 3, 3, 3);
+                    // Brazo Derecho
+                    if (this.rightFistExtended) {
+                        ctx.fillRect(this.x + 2, this.y + 4, rightPunchOffset + 1, 1);
+                    }
+                } else {
+                    // Boxeador mira hacia la IZQUIERDA
+                    // Cabeza
+                    ctx.fillRect(this.x - 2, this.y - 2, 3, 4);
+
+                    // Puño Izquierdo (Arriba en la pantalla)
+                    ctx.fillRect(this.x - 6 - leftPunchOffset, this.y - 6, 3, 3);
+                    // Brazo Izquierdo
+                    if (this.leftFistExtended) {
+                        ctx.fillRect(this.x - 3 - leftPunchOffset, this.y - 5, leftPunchOffset + 1, 1);
+                    }
+
+                    // Puño Derecho (Abajo en la pantalla)
+                    ctx.fillRect(this.x - 6 - rightPunchOffset, this.y + 3, 3, 3);
+                    // Brazo Derecho
+                    if (this.rightFistExtended) {
+                        ctx.fillRect(this.x - 3 - rightPunchOffset, this.y + 4, rightPunchOffset + 1, 1);
+                    }
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // Crear boxeadores
+        // P1: Blanco (Lado izquierdo al iniciar)
+        const p1 = new Boxer(50, 65, '#E2E8F0', 'left');
+        // P2/CPU: Negro/Azul oscuro (Lado derecho al iniciar)
+        const p2 = new Boxer(110, 65, '#1A1D20', 'right');
+
+        // Variables de juego
+        let roundTime = 120 * 60; // 2 minutos a 60 fps = 7200 ticks
+        let roundActive = false;
+        let isPowerOn = true;
+
+        // Teclados presionados
+        const keysPressed = {};
+
+        // --- MANEJO DE COLISIONES Y FÍSICA ---
+        function checkCollisions() {
+            // 1. Colisión entre boxeadores (Física de empuje circular)
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const minDist = p1.radius + p2.radius;
+
+            if (dist < minDist) {
+                // Calcular traslape
+                const overlap = minDist - dist;
+                const forceX = (dx / dist) * (overlap / 2);
+                const forceY = (dy / dist) * (overlap / 2);
+
+                // Empujar a ambos en direcciones opuestas
+                p1.x -= forceX;
+                p1.y -= forceY;
+                p2.x += forceX;
+                p2.y += forceY;
+            }
+
+            // 2. Colisiones con las Cuerdas (Bordes del Ring)
+            keepInsideRing(p1);
+            keepInsideRing(p2);
+        }
+
+        function keepInsideRing(boxer) {
+            let hitRope = false;
+            
+            if (boxer.x - boxer.radius < RING_MIN_X) {
+                boxer.x = RING_MIN_X + boxer.radius;
+                hitRope = true;
+            }
+            if (boxer.x + boxer.radius > RING_MAX_X) {
+                boxer.x = RING_MAX_X - boxer.radius;
+                hitRope = true;
+            }
+            if (boxer.y - boxer.radius < RING_MIN_Y) {
+                boxer.y = RING_MIN_Y + boxer.radius;
+                hitRope = true;
+            }
+            if (boxer.y + boxer.radius > RING_MAX_Y) {
+                boxer.y = RING_MAX_Y - boxer.radius;
+                hitRope = true;
+            }
+
+            return hitRope;
+        }
+
+        // --- SISTEMA DE GOLPES & SCORE ---
+        function checkPunches() {
+            // Verificar golpes de P1 a P2
+            if (p1.punchTimer === p1.punchMaxDuration - 1) { // Chequear al inicio del golpe
+                verifyHit(p1, p2);
+            }
+            
+            // Verificar golpes de P2 a P1
+            if (p2.punchTimer === p2.punchMaxDuration - 1) {
+                verifyHit(p2, p1);
+            }
+        }
+
+        function verifyHit(attacker, defender) {
+            // Determinar posición del puño atacante
+            let fistX = attacker.x;
+            let fistY = attacker.y;
+            const punchReach = 8;
+
+            if (attacker.leftFistExtended) {
+                fistY -= 4;
+                fistX += (attacker.side === 'left' ? punchReach : -punchReach);
+            } else if (attacker.rightFistExtended) {
+                fistY += 4;
+                fistX += (attacker.side === 'left' ? punchReach : -punchReach);
+            } else {
+                return; // Sin golpe extendido
+            }
+
+            // Distancia del puño al centro del defensor
+            const dx = defender.x - fistX;
+            const dy = defender.y - fistY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Rango de acoplamiento del golpe
+            if (dist < defender.radius + 3) {
+                // ¡GOLPE CONECTADO!
+                defender.flinchTimer = 10; // Aturdimiento
+                
+                // Retroceso del defensor
+                const knockback = 5;
+                const pushDir = attacker.side === 'left' ? 1 : -1;
+                defender.x += pushDir * knockback;
+
+                // Comprobar si fue atrapado contra las cuerdas (Clean hit / Body blow vs Jab)
+                // Si la distancia entre boxeadores es muy corta, es gancho limpio (2 puntos)
+                const boxerDist = Math.abs(defender.x - attacker.x);
+                let points = 1;
+                if (boxerDist < 14) {
+                    points = 2;
+                    playRetroSound('hit2');
+                } else {
+                    playRetroSound('hit1');
+                }
+
+                attacker.score += points;
+
+                // Comprobar K.O.
+                if (attacker.score >= 100) {
+                    handleKO(attacker);
+                }
+            }
+        }
+
+        function handleKO(winner) {
+            gameState = MODES.FINISHED;
+            roundActive = false;
+            playRetroSound('ko');
+        }
+
+        // --- SISTEMA DE CONTROL DE ENTRADA (MOVIMIENTO JUGADORES) ---
+        function updatePlayerMovement() {
+            if (!roundActive) return;
+
+            // --- JUGADOR 1 (WASD) ---
+            if (!p1.stunned) {
+                let dx = 0;
+                let dy = 0;
+                let moveSpeed = 1.0;
+
+                if (keysPressed['w'] || keysPressed['W']) dy -= 1;
+                if (keysPressed['s'] || keysPressed['S']) dy += 1;
+                if (keysPressed['a'] || keysPressed['A']) dx -= 1;
+                if (keysPressed['d'] || keysPressed['D']) dx += 1;
+
+                // Normalizar velocidad diagonal
+                if (dx !== 0 && dy !== 0) {
+                    dx *= 0.7071;
+                    dy *= 0.7071;
+                }
+
+                p1.x += dx * moveSpeed;
+                p1.y += dy * moveSpeed;
+            }
+
+            // --- JUGADOR 2 (Local PVP o CPU) ---
+            if (currentGameType === GAME_TYPES.PVP) {
+                if (!p2.stunned) {
+                    let dx = 0;
+                    let dy = 0;
+                    let moveSpeed = 1.0;
+
+                    if (keysPressed['ArrowUp']) dy -= 1;
+                    if (keysPressed['ArrowDown']) dy += 1;
+                    if (keysPressed['ArrowLeft']) dx -= 1;
+                    if (keysPressed['ArrowRight']) dx += 1;
+
+                    if (dx !== 0 && dy !== 0) {
+                        dx *= 0.7071;
+                        dy *= 0.7071;
+                    }
+
+                    p2.x += dx * moveSpeed;
+                    p2.y += dy * moveSpeed;
+                }
+            } else if (currentGameType === GAME_TYPES.VS_CPU) {
+                // Lógica de Inteligencia Artificial (AI)
+                updateCPUAI();
+            } else if (currentGameType === GAME_TYPES.CPU_VS_CPU) {
+                // Ambos controlados por CPU
+                updateDoubleCPU();
+            }
+
+            // Actualizar orientación según cruce de lados
+            if (p1.x > p2.x) {
+                p1.side = 'right';
+                p2.side = 'left';
+            } else {
+                p1.side = 'left';
+                p2.side = 'right';
+            }
+        }
+
+        // --- INTELIGENCIA ARTIFICIAL (CPU) ---
+        let cpuDecisionTimer = 0;
+        let cpuTargetY = 0;
+
+        function updateCPUAI() {
+            if (p2.stunned) return;
+
+            cpuDecisionTimer--;
+            if (cpuDecisionTimer <= 0) {
+                // La CPU reevalúa cada N frames según dificultad
+                const delayFrames = [20, 10, 4][currentDifficulty];
+                cpuDecisionTimer = delayFrames + Math.floor(Math.random() * 5);
+                cpuTargetY = p1.y + (Math.random() * 8 - 4); // Seguir con pequeño error
+            }
+
+            let speed = [0.6, 0.8, 1.1][currentDifficulty];
+            
+            // 1. Moverse hacia el jugador en Y para alinearse
+            if (p2.y < cpuTargetY - 2) {
+                p2.y += speed;
+            } else if (p2.y > cpuTargetY + 2) {
+                p2.y -= speed;
+            }
+
+            // 2. Acercarse en X
+            const distBonus = [16, 12, 10][currentDifficulty];
+            const targetX = p1.x + (p2.x > p1.x ? distBonus : -distBonus);
+
+            if (p2.x < targetX - 2) {
+                p2.x += speed;
+            } else if (p2.x > targetX + 2) {
+                p2.x -= speed;
+            }
+
+            // 3. Decidir golpear
+            const distance = Math.abs(p2.x - p1.x);
+            const yDiff = Math.abs(p2.y - p1.y);
+
+            if (distance < 16 && yDiff < 6) {
+                const punchChance = [0.03, 0.08, 0.15][currentDifficulty];
+                if (Math.random() < punchChance) {
+                    // Seleccionar un brazo aleatorio para golpear
+                    const hand = Math.random() > 0.5 ? 'left' : 'right';
+                    p2.punch(hand);
+                }
+            }
+        }
+
+        // Lógica de Demo Autocontrolada (CPU vs CPU)
+        function updateDoubleCPU() {
+            // Simular IA para P1 apuntando a P2
+            if (!p1.stunned) {
+                if (p1.y < p2.y - 2) p1.y += 0.8;
+                else if (p1.y > p2.y + 2) p1.y -= 0.8;
+
+                const targetX1 = p2.x + (p1.x > p2.x ? 12 : -12);
+                if (p1.x < targetX1 - 2) p1.x += 0.8;
+                else if (p1.x > targetX1 + 2) p1.x -= 0.8;
+
+                if (Math.abs(p1.x - p2.x) < 16 && Math.abs(p1.y - p2.y) < 6) {
+                    if (Math.random() < 0.08) p1.punch(Math.random() > 0.5 ? 'left' : 'right');
+                }
+            }
+
+            // Simular IA para P2 apuntando a P1
+            if (!p2.stunned) {
+                if (p2.y < p1.y - 2) p2.y += 0.8;
+                else if (p2.y > p1.y + 2) p2.y -= 0.8;
+
+                const targetX2 = p1.x + (p2.x > p1.x ? 12 : -12);
+                if (p2.x < targetX2 - 2) p2.x += 0.8;
+                else if (p2.x > targetX2 + 2) p2.x -= 0.8;
+
+                if (Math.abs(p2.x - p1.x) < 16 && Math.abs(p2.y - p1.y) < 6) {
+                    if (Math.random() < 0.08) p2.punch(Math.random() > 0.5 ? 'left' : 'right');
+                }
+            }
+        }
+
+        // --- CAPTURA DE TECLADOS ---
+        window.addEventListener('keydown', (e) => {
+            let key = e.key;
+
+            // Prevenir scroll
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].indexOf(key) > -1) {
+                e.preventDefault();
+            }
+
+            keysPressed[key] = true;
+
+            if (gameState === MODES.SPLASH) {
+                if (key === 'Enter' || key === ' ') {
+                    resetGame();
+                }
+                return;
+            }
+
+            if (gameState === MODES.FINISHED) {
+                if (key === 'Enter' || key === ' ') {
+                    resetGame();
+                }
+                return;
+            }
+
+            // Lanzamiento de golpes del Jugador 1
+            // Usar J (izquierda) o K (derecha)
+            if (key.toLowerCase() === 'j') {
+                p1.punch('left');
+            } 
+            else if (key.toLowerCase() === 'k') {
+                p1.punch('right');
+            }
+
+            // Lanzamiento de golpes del Jugador 2 (PVP)
+            if (currentGameType === GAME_TYPES.PVP) {
+                if (key === '1' || key === ',' || key === 'Numpad1') {
+                    p2.punch('left');
+                } 
+                else if (key === '2' || key === '.' || key === 'Numpad2') {
+                    p2.punch('right');
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keysPressed[e.key] = false;
+        });
+
+        // Asegura que la ventana tome foco para capturar eventos
+        function focusGame() {
+            window.focus();
+        }
+
+        // --- SISTEMAS DE DIBUJO ATARI Y RENDER ---
+
+        // Dibuja números pixelados estilo 7 segmentos de Atari 2600
+        const PIXEL_NUMBERS = [
+            [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]], // 0
+            [[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]], // 1
+            [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]], // 2
+            [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]], // 3
+            [[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]], // 4
+            [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]], // 5
+            [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]], // 6
+            [[1,1,1],[0,0,1],[0,1,0],[0,1,0],[0,1,0]], // 7
+            [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]], // 8
+            [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]]  // 9
+        ];
+
+        function drawAtariNum(number, startX, y, color) {
+            ctx.save();
+            ctx.fillStyle = color;
+            const digits = number.toString().padStart(2, '0').split('');
+            
+            digits.forEach((digit, idx) => {
+                const digitMap = PIXEL_NUMBERS[parseInt(digit)];
+                const dx = startX + idx * 12;
+
+                for (let r = 0; r < 5; r++) {
+                    for (let c = 0; c < 3; c++) {
+                        if (digitMap[r][c]) {
+                            // Escala pixelada de Atari (píxeles rectangulares gordos)
+                            ctx.fillRect(dx + c * 2, y + r * 2, 2, 2);
+                        }
+                    }
+                }
+            });
+            ctx.restore();
+        }
+
+        function drawGame() {
+            // Fondo original Atari: El cuadrilátero es verde oscuro y el borde es azul/gris
+            ctx.fillStyle = '#687890'; // Color exterior del ring
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+            // El tapiz del ring de boxeo (gris verdoso)
+            ctx.fillStyle = '#C8D8B8';
+            ctx.fillRect(RING_MIN_X, RING_MIN_Y, RING_MAX_X - RING_MIN_X, RING_MAX_Y - RING_MIN_Y);
+
+            // Dibujar cuerdas del ring (Líneas negras/marrones de ropes)
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(RING_MIN_X, RING_MIN_Y, RING_MAX_X - RING_MIN_X, RING_MAX_Y - RING_MIN_Y);
+
+            if (gameState === MODES.SPLASH) {
+                // Pantalla de Inicio
+                ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                ctx.fillRect(RING_MIN_X, RING_MIN_Y, RING_MAX_X - RING_MIN_X, RING_MAX_Y - RING_MIN_Y);
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '8px "Press Start 2P", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText("ATARI BOXING", WIDTH / 2, HEIGHT / 2 - 10);
+                
+                ctx.font = '5px "Press Start 2P", monospace';
+                ctx.fillText("PULSA RESET / SELECT", WIDTH / 2, HEIGHT / 2 + 10);
+                return;
+            }
+
+            // Dibujar Boxeadores
+            p1.draw();
+            p2.draw();
+
+            // Dibujar el Marcador de Score Superior (Fijo arriba en el ring)
+            drawAtariNum(p1.score, 38, 6, '#E2E8F0');
+            drawAtariNum(p2.score, 98, 6, '#1A1D20');
+
+            // Dibujar Reloj / Timer Central
+            const secTotal = Math.ceil(roundTime / 60);
+            const min = Math.floor(secTotal / 60);
+            const sec = secTotal % 60;
+            const timerStr = `${min}:${sec.toString().padStart(2, '0')}`;
+            
+            ctx.save();
+            ctx.fillStyle = '#FF9F1C';
+            ctx.font = '7px "Press Start 2P", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(timerStr, WIDTH / 2, 14);
+            ctx.restore();
+
+            if (gameState === MODES.FINISHED) {
+                // Cartelera Final
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(RING_MIN_X, RING_MIN_Y, RING_MAX_X - RING_MIN_X, RING_MAX_Y - RING_MIN_Y);
+                
+                ctx.fillStyle = '#FF453A';
+                ctx.font = '7px "Press Start 2P", monospace';
+                ctx.textAlign = 'center';
+                
+                if (p1.score >= 100) {
+                    ctx.fillText("K.O. JUGADOR 1!", WIDTH / 2, HEIGHT / 2 - 10);
+                } else if (p2.score >= 100) {
+                    ctx.fillText("K.O. OPONENTE!", WIDTH / 2, HEIGHT / 2 - 10);
+                } else {
+                    const winner = p1.score > p2.score ? "JUGADOR 1" : "OPONENTE";
+                    ctx.fillText(`¡GANADOR: ${winner}!`, WIDTH / 2, HEIGHT / 2 - 10);
+                }
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '5px "Press Start 2P", monospace';
+                ctx.fillText("PULSA RESET JUGAR", WIDTH / 2, HEIGHT / 2 + 10);
+            }
+        }
+
+        // --- CICLO PRINCIPAL (LOOP ENGINE) ---
+        function loop() {
+            if (isPowerOn) {
+                if (gameState === MODES.PLAYING && roundActive) {
+                    // Restar tiempo de round
+                    if (roundTime > 0) {
+                        roundTime--;
+                        if (roundTime === 0) {
+                            // Se acabó el tiempo
+                            gameState = MODES.FINISHED;
+                            roundActive = false;
+                            playRetroSound('ko');
+                        }
+                    }
+
+                    // Actualizaciones
+                    updatePlayerMovement();
+                    p1.update();
+                    p2.update();
+                    checkCollisions();
+                    checkPunches();
+                }
+
+                drawGame();
+            } else {
+                // Pantalla apagada / sin señal
+                ctx.fillStyle = '#0a0a0a';
+                ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            }
+            requestAnimationFrame(loop);
+        }
+
+        // --- SISTEMAS DE CONSOLA ATARI (SWITCHES) ---
+
+        function toggleGameMode() {
+            if (!isPowerOn) return;
+            playRetroSound('miss');
+            const modeSwitch = document.getElementById('gameModeSwitch');
+            const modeLabel = document.getElementById('gameModeLabel');
+            const p2Group = document.getElementById('p2ControlsGroup');
+
+            if (currentGameType === GAME_TYPES.VS_CPU) {
+                // Pasar a PVP
+                currentGameType = GAME_TYPES.PVP;
+                modeSwitch.classList.remove('up');
+                modeSwitch.classList.add('down');
+                modeLabel.textContent = "LOCAL PVP";
+                p2Group.style.opacity = "1";
+            } else {
+                // Volver a VS CPU
+                currentGameType = GAME_TYPES.VS_CPU;
+                modeSwitch.classList.remove('down');
+                modeSwitch.classList.add('up');
+                modeLabel.textContent = "VS CPU";
+                p2Group.style.opacity = "0.5";
+            }
+            resetGame();
+        }
+
+        function toggleDifficulty() {
+            if (!isPowerOn) return;
+            playRetroSound('miss');
+            const diffSwitch = document.getElementById('diffSwitch');
+            const diffLabel = document.getElementById('diffLabel');
+
+            if (currentDifficulty === DIFF_LEVELS.EASY) {
+                currentDifficulty = DIFF_LEVELS.MEDIUM;
+                diffSwitch.classList.remove('down');
+                diffSwitch.classList.add('up');
+                diffLabel.textContent = "MEDIUM";
+            } else if (currentDifficulty === DIFF_LEVELS.MEDIUM) {
+                currentDifficulty = DIFF_LEVELS.HARD;
+                diffSwitch.classList.remove('up');
+                diffSwitch.classList.add('down');
+                diffLabel.textContent = "HARD";
+            } else {
+                currentDifficulty = DIFF_LEVELS.EASY;
+                diffSwitch.classList.remove('down');
+                diffSwitch.classList.add('up');
+                diffLabel.textContent = "EASY";
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const sw = document.getElementById('soundSwitch');
+            const label = document.getElementById('soundLabel');
+            
+            if (soundEnabled) {
+                sw.classList.remove('down');
+                sw.classList.add('up');
+                label.textContent = "AUDIO ON";
+                label.style.color = "var(--accent-color)";
+                playRetroSound('miss');
+            } else {
+                sw.classList.remove('up');
+                sw.classList.add('down');
+                label.textContent = "MUTED";
+                label.style.color = "var(--text-muted)";
+            }
+        }
+
+        function resetGame() {
+            if (!isPowerOn) return;
+            
+            playRetroSound('bell');
+            
+            // Posicionamiento de boxeadores original
+            p1.reset(50, 65, 'left');
+            p2.reset(110, 65, 'right');
+
+            roundTime = 120 * 60; // 2 Minutos
+            gameState = MODES.PLAYING;
+            roundActive = true;
+        }
+
+        function toggleCRT() {
+            const screen = document.querySelector('.crt-screen-wrapper');
+            const btn = document.getElementById('crtToggle');
+            const scanlines = document.querySelector('.crt-scanlines');
+            const flicker = document.querySelector('.crt-flicker');
+
+            if (btn.classList.contains('active')) {
+                btn.classList.remove('active');
+                btn.textContent = 'Apagado';
+                scanlines.style.display = 'none';
+                flicker.style.display = 'none';
+                screen.style.borderRadius = '0px';
+            } else {
+                btn.classList.add('active');
+                btn.textContent = 'Activado';
+                scanlines.style.display = 'block';
+                flicker.style.display = 'block';
+                screen.style.borderRadius = '40px / 30px';
+            }
+        }
+
+        // --- INICIALIZACIÓN ---
+        window.addEventListener('load', () => {
+            // Encender luz de encendido de la TV
+            const led = document.getElementById('powerLed');
+            led.classList.remove('off');
+            
+            // Iniciar bucle de juego
+            requestAnimationFrame(loop);
+        });
+    </script>
+</body>
+</html>
