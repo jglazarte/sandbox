@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCADE.SHELL — Colección de Juegos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-2: #0f0f0f;
+    --fg: #f0f0f0;
+    --muted: #6a6a6a;
+    --muted-2: #3a3a3a;
+    --accent: #00ff9d;
+    --accent-dim: rgba(0, 255, 157, 0.12);
+    --accent-glow: rgba(0, 255, 157, 0.5);
+    --border: #1c1c1c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    line-height: 1.5;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    cursor: none;
+  }
+
+  @media (hover: none) {
+    body { cursor: auto; }
+  }
+
+  /* Grid de fondo tipo blueprint */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0, 255, 157, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 157, 0.03) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+    z-index: 1;
+    mask-image: radial-gradient(ellipse 80% 60% at center, black 0%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at center, black 0%, transparent 100%);
+  }
+
+  /* Scanlines CRT */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.3) 3px,
+      rgba(0, 0, 0, 0.3) 4px
+    );
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.35;
+  }
+
+  /* Ruido sutil */
+  .noise {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+  }
+
+  /* Cursor personalizado */
+  .cursor-dot {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width 0.25s ease, height 0.25s ease;
+  }
+
+  .cursor-ring {
+    position: fixed;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    opacity: 0.5;
+    transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                opacity 0.3s ease,
+                background 0.3s ease;
+  }
+
+  .cursor-dot.hover { width: 4px; height: 4px; }
+  .cursor-ring.hover {
+    width: 64px;
+    height: 64px;
+    opacity: 1;
+    background: var(--accent-dim);
+  }
+
+  @media (hover: none) {
+    .cursor-dot, .cursor-ring { display: none; }
+  }
+
+  .container {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 32px 40px 80px;
+    position: relative;
+    z-index: 10;
+  }
+
+  /* Barra de estado superior */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .status-group {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.6); }
+  }
+
+  /* Header */
+  header {
+    padding: 96px 0 72px;
+    position: relative;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s forwards;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .label::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(3rem, 11vw, 8rem);
+    font-weight: 700;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    color: var(--fg);
+  }
+
+  h1 .accent {
+    color: var(--accent);
+    font-weight: 300;
+  }
+
+  .subtitle {
+    font-size: clamp(1rem, 1.4vw, 1.2rem);
+    color: var(--muted);
+    max-width: 580px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .subtitle strong {
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  /* Sección de juegos */
+  .games-section { margin-top: 24px; }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+  }
+
+  .section-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+
+  .games-list { list-style: none; }
+
+  .game-item {
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp 0.6s forwards;
+  }
+
+  .game-item:nth-child(1) { animation-delay: 0.5s; }
+  .game-item:nth-child(2) { animation-delay: 0.58s; }
+  .game-item:nth-child(3) { animation-delay: 0.66s; }
+  .game-item:nth-child(4) { animation-delay: 0.74s; }
+  .game-item:nth-child(5) { animation-delay: 0.82s; }
+  .game-item:nth-child(6) { animation-delay: 0.9s; }
+
+  .game-link {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    align-items: center;
+    gap: 32px;
+    padding: 32px 16px 32px 24px;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+                background 0.4s ease;
+  }
+
+  .game-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  .game-link:hover {
+    transform: translateX(12px);
+    background: linear-gradient(90deg, var(--accent-dim), transparent 60%);
+  }
+
+  .game-link:hover::before { transform: scaleY(1); }
+
+  .game-num {
+    font-family: 'Major Mono Display', monospace;
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    color: var(--muted-2);
+    line-height: 1;
+    transition: color 0.5s ease, text-shadow 0.5s ease;
+    user-select: none;
+  }
+
+  .game-link:hover .game-num {
+    color: var(--accent);
+    text-shadow: 0 0 32px var(--accent-glow);
+  }
+
+  .game-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .game-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(1.5rem, 3vw, 2.4rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    line-height: 1.1;
+  }
+
+  .game-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .game-play {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    transform: translateX(-12px);
+    transition: opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+                color 0.3s ease;
+    white-space: nowrap;
+  }
+
+  .game-link:hover .game-play {
+    color: var(--accent);
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .game-play .arrow {
+    display: inline-block;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    font-size: 14px;
+  }
+
+  .game-link:hover .game-play .arrow { transform: translateX(8px); }
+
+  /* Flash al activar con teclado */
+  .game-link.flash {
+    background: var(--accent-dim) !important;
+    transform: translateX(12px) !important;
+  }
+  .game-link.flash::before { transform: scaleY(1) !important; }
+  .game-link.flash .game-num {
+    color: var(--accent) !important;
+    text-shadow: 0 0 32px var(--accent-glow) !important;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .key {
+    display: inline-block;
+    padding: 2px 7px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--accent);
+    background: var(--bg-2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+  }
+  .key + .key { margin-left: 4px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 20px 20px 60px; }
+    header { padding: 48px 0 48px; }
+    .game-link {
+      grid-template-columns: 60px 1fr;
+      gap: 16px;
+      padding: 24px 8px;
+    }
+    .game-play { display: none; }
+    .game-link:hover { transform: translateX(4px); }
+    .status-bar { font-size: 10px; }
+    .status-group { gap: 12px; }
+    footer { flex-direction: column; align-items: flex-start; font-size: 10px; }
+    .key-hint { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+  <!-- Ruido -->
+  <svg class="noise" xmlns="http://www.w3.org/2000/svg">
+    <filter id="noiseFilter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#noiseFilter)"/>
+  </svg>
+
+  <!-- Cursor personalizado -->
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <div class="container">
+    <!-- Barra de estado -->
+    <div class="status-bar">
+      <div class="status-group">
+        <span class="status-item"><span class="status-dot"></span> System Online</span>
+        <span class="status-item">06 / 06 Titles</span>
+      </div>
+      <div class="status-group">
+        <span class="status-item" id="clock">--:--:--</span>
+        <span class="status-item">v1.0.0</span>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+      <div class="label">Colección · 2024</div>
+      <h1>arcade<span class="accent">.</span>shell</h1>
+      <p class="subtitle">Seis juegos clásicos reimaginados en HTML puro. Selecciona un título para empezar a jugar — también puedes usar las teclas <strong>[1]</strong> a <strong>[6]</strong>.</p>
+    </header>
+
+    <!-- Lista de juegos -->
+    <section class="games-section">
+      <div class="section-header">
+        <span class="section-title">// Selector de títulos</span>
+        <span class="section-count">[ 06 available ]</span>
+      </div>
+
+      <ol class="games-list">
+        <li class="game-item">
+          <a href="https://jglazarte.github.io/sandbox/Juegos/Arkanoid.html" target="_blank" rel="noopener noreferrer" class="game-link" data-key="1">
+            <span class="game-num">01</span>
+            <div class="game-info">
+              <h2 class="game-title">Arkanoid</h2>
+              <span class="game-desc">Clon del clásico breakout</span>
+            </div>
+            <span class="game-play">Play <span class="arrow">→</span></span>
+          </a>
+        </li>
+
+        <li class="game-item">
+          <a href="https://jglazarte.github.io/sandbox/Juegos/Tipeo.html" target="_blank" rel="noopener noreferrer" class="game-link" data-key="2">
+            <span class="game-num">02</span>
+            <div class="game-info">
+              <h2 class="game-title">Tipeo</h2>
+              <span class="game-desc">Prueba de velocidad de tipeo</span>
+            </div>
+            <span class="game-play">Play <span class="arrow">→</span></span>
+          </a>
+        </li>
+
+        <li class="game-item">
+          <a href="https://jglazarte.github.io/sandbox/Juegos/boxing.html" target="_blank" rel="noopener noreferrer" class="game-link" data-key="3">
+            <span class="game-num">03</span>
+            <div class="game-info">
+              <h2 class="game-title">Boxing</h2>
+              <span class="game-desc">Clon del Boxing de Atari</span>
+            </div>
+            <span class="game-play">Play <span class="arrow">→</span></span>
+          </a>
+        </li>
+
+        <li class="game-item">
+          <a href="https://jglazarte.github.io/sandbox/Juegos/freecell.html" target="_blank" rel="noopener noreferrer" class="game-link" data-key="4">
+            <span class="game-num">04</span>
+            <div class="game-info">
+              <h2 class="game-title">FreeCell</h2>
+              <span class="game-desc">Clon de Freecell</span>
+            </div>
+            <span class="game-play">Play <span class="arrow">→</span></span>
+          </a>
+        </li>
+
+        <li class="game-item">
+          <a href="https://jglazarte.github.io/sandbox/Juegos/snake.html" target="_blank" rel="noopener noreferrer" class="game-link" data-key="5">
+            <span class="game-num">05</span>
+            <div class="game-info">
+              <h2 class="game-title">Snake</h2>
+              <span class="game-desc">Clon de Snake de Nokia</span>
+            </div>
+            <span class="game-play">Play <span class="arrow">→</span></span>
+          </a>
+        </li>
+
+        <li class="game-item">
+          <a href="https://jglazarte.github.io/sandbox/Juegos/tetrisclon.html" target="_blank" rel="noopener noreferrer" class="game-link" data-key="6">
+            <span class="game-num">06</span>
+            <div class="game-info">
+              <h2 class="game-title">Tetris</h2>
+              <span class="game-desc">Clon de Tetris</span>
+            </div>
+            <span class="game-play">Play <span class="arrow">→</span></span>
+          </a>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <span>// arcade.shell — jglazarte</span>
+      <span class="key-hint">Press <span class="key">1</span><span class="key">2</span><span class="key">3</span><span class="key">4</span><span class="key">5</span><span class="key">6</span> to quick launch</span>
+    </footer>
+  </div>
+
+  <script>
+    // Reloj en vivo
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      const clock = document.getElementById('clock');
+      if (clock) clock.textContent = `${h}:${m}:${s}`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Cursor personalizado con seguimiento suave
+    const cursorDot = document.getElementById('cursorDot');
+    const cursorRing = document.getElementById('cursorRing');
+
+    let mouseX = 0, mouseY = 0;
+    let ringX = 0, ringY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      cursorDot.style.left = mouseX + 'px';
+      cursorDot.style.top = mouseY + 'px';
+    });
+
+    function animateRing() {
+      ringX += (mouseX - ringX) * 0.15;
+      ringY += (mouseY - ringY) * 0.15;
+      cursorRing.style.left = ringX + 'px';
+      cursorRing.style.top = ringY + 'px';
+      requestAnimationFrame(animateRing);
+    }
+    animateRing();
+
+    // Expansión del cursor sobre los enlaces
+    document.querySelectorAll('.game-link').forEach(link => {
+      link.addEventListener('mouseenter', () => {
+        cursorDot.classList.add('hover');
+        cursorRing.classList.add('hover');
+      });
+      link.addEventListener('mouseleave', () => {
+        cursorDot.classList.remove('hover');
+        cursorRing.classList.remove('hover');
+      });
+    });
+
+    // Atajos de teclado 1-6
+    document.addEventListener('keydown', (e) => {
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 6) {
+        const link = document.querySelector(`.game-link[data-key="${num}"]`);
+        if (link) {
+          link.classList.add('flash');
+          setTimeout(() => {
+            link.classList.remove('flash');
+            window.open(link.href, '_blank', 'noopener,noreferrer');
+          }, 180);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
