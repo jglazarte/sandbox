@@ -1,0 +1,19 @@
+ID;Número;Carátula;Último Paso;Próxima Tarea;Responsable;Estado
+101;1001/2024;Gomez c/ Perez s/ Daños;Demanda notificada;Esperar contestación;Guille;verde
+102;1002/2024;Martinez c/ Banco Galicia s/ Consumo;Audiencia celebrada;Presentar alegatos;Silvana;amarillo
+103;1003/2024;Lopez s/ Sucesión;Declaratoria dictada;Inscribir declaratoria;Claudia;verde
+104;1004/2024;Fernandez c/ Rodriguez s/ Desalojo;Cédula devuelta;Diligenciar nueva cédula;Gastón;rojo
+105;1005/2024;Gimenez s/ Divorcio;Convenio presentado;Esperar homologación;Santiago;verde
+106;1006/2024;Torres c/ Municipio s/ Amparo;Cautelar rechazada;Apelar rechazo;Augusto;rojo
+107;1007/2024;Navarro c/ La Caja s/ Daños;Pericia médica;Impugnar pericia;Sara;amarillo
+108;1008/2024;Acosta c/ Empresa S.A. s/ Despido;Conciliación fracasada;Preparar prueba;Paolo;verde
+109;1009/2024;Ramirez s/ Adopción;Informe social;Alegar sobre informe;Luca;verde
+110;1010/2024;Diaz c/ Supermercado s/ Daños;Demanda en traslado;Controlar plazo;Guille;amarillo
+111;1011/2024;Vera c/ Clínica s/ Mala praxis;Informativa enviada;Reiterar oficio;Silvana;rojo
+112;1012/2024;Sosa s/ Quiebra;Síndico designado;Acompañar libros;Claudia;amarillo
+113;1013/2024;Blanco c/ Romero s/ Cobro;Mandamiento devuelto;Pedir nueva orden;Gastón;amarillo
+114;1014/2024;Silva s/ Insania;Junta médica fijada;Notificar a la familia;Santiago;verde
+115;1015/2024;Molina c/ Estado s/ Daños;Sentencia 1ra Instancia;Apelar honorarios;Augusto;verde
+116;1016/2024;Iglesias c/ Consorcio s/ Daños;Testimonial tomada;Pedir cierre periodo;Sara;verde
+117;1017/2024;Paz c/ Seguros S.A. s/ Ejecución;Embargo trabado;Pedir transferencia;Paolo;rojo
+118;1018/2024;Juarez s/ Guarda;Visita social;Presentar informe;Luca;amarillo

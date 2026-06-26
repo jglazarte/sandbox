@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeCell Modern Edition</title>
+    <style>
+        :root {
+            --bg-color: #0b5d3b;
+            --card-white: #ffffff;
+            --card-shadow: rgba(0,0,0,0.3);
+            --text-red: #e74c3c;
+            --text-black: #2c3e50;
+            --accent: #f1c40f;
+            --slot-border: rgba(255,255,255,0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle, #147a4e 0%, #0b5d3b 100%);
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            color: white;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .stats { display: flex; gap: 20px; font-weight: bold; }
+        .controls { display: flex; gap: 10px; }
+        button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        button:active { transform: scale(0.95); }
+        .btn-new { background: var(--accent); color: #333; }
+        .btn-action { background: rgba(255,255,255,0.2); color: white; }
+        .btn-action:hover { background: rgba(255,255,255,0.3); }
+
+        #game-board {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            max-width: 1100px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .top-row { display: flex; justify-content: space-between; }
+        .slots-container { display: flex; gap: 10px; }
+
+        .slot {
+            width: 100px;
+            height: 140px;
+            border: 2px dashed var(--slot-border);
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .foundation-icon {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            opacity: 0.15;
+            color: white;
+        }
+
+        .tableau {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 15px;
+            flex: 1;
+        }
+
+        .column {
+            width: 100px;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .card {
+            width: 100px;
+            height: 140px;
+            background: var(--card-white);
+            border-radius: 8px;
+            position: absolute;
+            box-shadow: 0 2px 5px var(--card-shadow);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            border: 1px solid #ccc;
+            transition: transform 0.1s;
+        }
+
+        .card.selected {
+            transform: translateY(-20px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 1000 !important;
+            border: 3px solid var(--accent);
+        }
+
+        .card .value { font-size: 20px; font-weight: bold; line-height: 1; }
+        .card .suit-main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 45px;
+        }
+
+        .red { color: var(--text-red); }
+        .black { color: var(--text-black); }
+
+        #victory-screen {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="stats">
+        <span>Tiempo: <span id="timer">00:00</span></span>
+        <span>Movimientos: <span id="moves">0</span></span>
+    </div>
+    <div class="controls">
+        <button class="btn-action" onclick="game.undo()">Deshacer</button>
+        <button class="btn-new" onclick="game.init()">Nueva Partida</button>
+    </div>
+</header>
+
+<div id="game-board">
+    <div class="top-row">
+        <div class="slots-container" id="free-cells">
+            <div class="slot" data-idx="0"></div>
+            <div class="slot" data-idx="1"></div>
+            <div class="slot" data-idx="2"></div>
+            <div class="slot" data-idx="3"></div>
+        </div>
+        <div class="slots-container" id="foundations">
+            <div class="slot" data-suit="spades"><span class="foundation-icon">♠</span></div>
+            <div class="slot" data-suit="hearts"><span class="foundation-icon">♥</span></div>
+            <div class="slot" data-suit="diamonds"><span class="foundation-icon">♦</span></div>
+            <div class="slot" data-suit="clubs"><span class="foundation-icon">♣</span></div>
+        </div>
+    </div>
+
+    <div class="tableau" id="tableau"></div>
+</div>
+
+<div id="victory-screen">
+    <h1>🏆 ¡Victoria Magistral!</h1>
+    <p>Has completado el juego con éxito.</p>
+    <button class="btn-new" style="margin-top: 20px; padding: 15px 30px;" onclick="game.init()">Jugar de nuevo</button>
+</div>
+
+<script>
+    const SUITS = [
+        { name: 'spades', symbol: '♠', color: 'black' },
+        { name: 'hearts', symbol: '♥', color: 'red' },
+        { name: 'diamonds', symbol: '♦', color: 'red' },
+        { name: 'clubs', symbol: '♣', color: 'black' }
+    ];
+    const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+    class FreeCell {
+        constructor() {
+            this.tableau = [];
+            this.freeCells = [null, null, null, null];
+            this.foundations = { spades: [], hearts: [], diamonds: [], clubs: [] };
+            this.selected = null;
+            this.moveCount = 0;
+            this.seconds = 0;
+            this.timerInterval = null;
+            this.history = [];
+        }
+
+        init() {
+            this.resetState();
+            const deck = this.createDeck();
+            this.shuffle(deck);
+            this.deal(deck);
+            this.render();
+            this.startTimer();
+        }
+
+        resetState() {
+            this.tableau = Array.from({ length: 8 }, () => []);
+            this.freeCells = [null, null, null, null];
+            this.foundations = { spades: [], hearts: [], diamonds: [], clubs: [] };
+            this.moveCount = 0;
+            this.seconds = 0;
+            this.history = [];
+            this.selected = null;
+            document.getElementById('victory-screen').style.display = 'none';
+            if(this.timerInterval) clearInterval(this.timerInterval);
+        }
+
+        createDeck() {
+            let deck = [];
+            SUITS.forEach(suit => {
+                VALUES.forEach((val, index) => {
+                    deck.push({ suit: suit.name, symbol: suit.symbol, color: suit.color, value: index + 1, label: val });
+                });
+            });
+            return deck;
+        }
+
+        shuffle(deck) {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        deal(deck) {
+            let col = 0;
+            while (deck.length > 0) {
+                this.tableau[col].push(deck.pop());
+                col = (col + 1) % 8;
+            }
+        }
+
+        // --- Lógica de Juego ---
+
+        canMoveToTableau(card, targetColIdx) {
+            const targetCol = this.tableau[targetColIdx];
+            if (targetCol.length === 0) return true;
+            const topCard = targetCol[targetCol.length - 1];
+            return card.color !== topCard.color && card.value === topCard.value - 1;
+        }
+
+        canMoveToFoundation(card) {
+            const stack = this.foundations[card.suit];
+            if (stack.length === 0) return card.value === 1;
+            return card.value === stack[stack.length - 1].value + 1;
+        }
+
+        getMaxMovable() {
+            const freeCount = this.freeCells.filter(c => c === null).length;
+            const emptyCols = this.tableau.filter(c => c.length === 0).length;
+            return (freeCount + 1) * Math.pow(2, emptyCols);
+        }
+
+        getValidSequence(colIdx, cardIdx) {
+            const col = this.tableau[colIdx];
+            let sequence = [col[cardIdx]];
+            for (let i = cardIdx + 1; i < col.length; i++) {
+                const prev = col[i - 1];
+                const curr = col[i];
+                if (curr.color !== prev.color && curr.value === prev.value - 1) {
+                    sequence.push(curr);
+                } else return null;
+            }
+            return sequence;
+        }
+
+        moveCards(origin, dest, sequence) {
+            this.saveHistory();
+            
+            // Quitar
+            if (origin.type === 'tableau') this.tableau[origin.idx].splice(-sequence.length);
+            else if (origin.type === 'free') this.freeCells[origin.idx] = null;
+
+            // Poner
+            if (dest.type === 'tableau') this.tableau[dest.idx].push(...sequence);
+            else if (dest.type === 'free') this.freeCells[dest.idx] = sequence[0];
+            else if (dest.type === 'foundation') this.foundations[sequence[0].suit].push(sequence[0]);
+
+            this.moveCount++;
+            this.render();
+            this.checkVictory();
+            setTimeout(() => this.autoMove(), 200);
+        }
+
+        autoMove() {
+            let moved = false;
+            // Revisar Tableau
+            this.tableau.forEach((col, i) => {
+                if (col.length > 0) {
+                    const last = col[col.length-1];
+                    if (this.canMoveToFoundation(last)) {
+                        this.moveCards({type:'tableau', idx:i}, {type:'foundation'}, [last]);
+                        moved = true;
+                    }
+                }
+            });
+            // Revisar Free Cells
+            this.freeCells.forEach((card, i) => {
+                if (card && this.canMoveToFoundation(card)) {
+                    this.moveCards({type:'free', idx:i}, {type:'foundation'}, [card]);
+                    moved = true;
+                }
+            });
+            if (moved) setTimeout(() => this.autoMove(), 150);
+        }
+
+        // --- Interacción ---
+
+        handleCardClick(colIdx, cardIdx) {
+            if (this.selected) {
+                this.tryMoveToTableau(colIdx);
+            } else {
+                const sequence = this.getValidSequence(colIdx, cardIdx);
+                if (sequence) {
+                    this.selected = { type: 'tableau', idx: colIdx, sequence, card: sequence[0] };
+                    this.render();
+                }
+            }
+        }
+
+        handleFreeCellClick(idx) {
+            if (this.selected) {
+                if (this.selected.sequence.length === 1 && this.freeCells[idx] === null) {
+                    this.moveCards(this.selected, { type: 'free', idx }, this.selected.sequence);
+                    this.selected = null;
+                } else {
+                    this.selected = null;
+                    this.render();
+                }
+            } else if (this.freeCells[idx]) {
+                const card = this.freeCells[idx];
+                this.selected = { type: 'free', idx, card, sequence: [card] };
+                this.render();
+            }
+        }
+
+        tryMoveToTableau(destIdx) {
+            const seq = this.selected.sequence;
+            const max = this.getMaxMovable();
+            // Ajuste: si la columna destino está vacía, el max real es un poco mayor en reglas oficiales, 
+            // pero mantenemos la fórmula estándar por estabilidad.
+            if (seq.length <= max && this.canMoveToTableau(seq[0], destIdx)) {
+                this.moveCards(this.selected, { type: 'tableau', idx: destIdx }, seq);
+                this.selected = null;
+            } else {
+                this.selected = null;
+                this.render();
+            }
+        }
+
+        // --- Renderizado ---
+
+        render() {
+            document.getElementById('moves').textContent = this.moveCount;
+            
+            // Tableau
+            const tableauEl = document.getElementById('tableau');
+            tableauEl.innerHTML = '';
+            this.tableau.forEach((col, colIdx) => {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'column';
+                colDiv.onclick = () => { if(this.selected) this.tryMoveToTableau(colIdx); };
+
+                col.forEach((card, cardIdx) => {
+                    const cardEl = this.createCardElement(card);
+                    cardEl.style.top = `${cardIdx * 30}px`;
+                    cardEl.style.zIndex = cardIdx;
+                    if (this.selected && this.selected.card === card) cardEl.classList.add('selected');
+                    
+                    cardEl.onclick = (e) => {
+                        e.stopPropagation();
+                        this.handleCardClick(colIdx, cardIdx);
+                    };
+                    colDiv.appendChild(cardEl);
+                });
+                tableauEl.appendChild(colDiv);
+            });
+
+            // Free Cells
+            this.freeCells.forEach((card, i) => {
+                const slot = document.querySelector(`#free-cells .slot[data-idx="${i}"]`);
+                slot.innerHTML = '';
+                slot.onclick = () => this.handleFreeCellClick(i);
+                if (card) {
+                    const cardEl = this.createCardElement(card);
+                    if (this.selected && this.selected.card === card) cardEl.classList.add('selected');
+                    slot.appendChild(cardEl);
+                }
+            });
+
+            // Foundations
+            SUITS.forEach(suit => {
+                const slot = document.querySelector(`#foundations .slot[data-suit="${suit.name}"]`);
+                const stack = this.foundations[suit.name];
+                slot.innerHTML = `<span class="foundation-icon">${suit.symbol}</span>`;
+                if (stack.length > 0) {
+                    slot.appendChild(this.createCardElement(stack[stack.length - 1]));
+                }
+            });
+        }
+
+        createCardElement(card) {
+            const div = document.createElement('div');
+            div.className = `card ${card.color}`;
+            div.innerHTML = `
+                <div class="value">${card.label}${card.symbol}</div>
+                <div class="suit-main">${card.symbol}</div>
+            `;
+            return div;
+        }
+
+        // --- Sistema ---
+
+        startTimer() {
+            this.timerInterval = setInterval(() => {
+                this.seconds++;
+                const m = Math.floor(this.seconds / 60).toString().padStart(2, '0');
+                const s = (this.seconds % 60).toString().padStart(2, '0');
+                document.getElementById('timer').textContent = `${m}:${s}`;
+            }, 1000);
+        }
+
+        saveHistory() {
+            this.history.push(JSON.stringify({
+                tableau: this.tableau,
+                freeCells: this.freeCells,
+                foundations: this.foundations,
+                moveCount: this.moveCount
+            }));
+            if (this.history.length > 30) this.history.shift();
+        }
+
+        undo() {
+            if (this.history.length > 0) {
+                const state = JSON.parse(this.history.pop());
+                this.tableau = state.tableau;
+                this.freeCells = state.freeCells;
+                this.foundations = state.foundations;
+                this.moveCount = state.moveCount;
+                this.selected = null;
+                this.render();
+            }
+        }
+
+        checkVictory() {
+            if (Object.values(this.foundations).every(s => s.length === 13)) {
+                clearInterval(this.timerInterval);
+                document.getElementById('victory-screen').style.display = 'flex';
+            }
+        }
+    }
+
+    const game = new FreeCell();
+    game.init();
+</script>
+</body>
+</html>

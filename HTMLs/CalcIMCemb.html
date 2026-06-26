@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de IMC</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e6f3e6;
+            color: #2c5f2d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #c1e1c1;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+        }
+        h1 {
+            text-align: center;
+            color: #1a4a1a;
+        }
+        input, button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #2c5f2d;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #resultado {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #escala {
+            margin-top: 20px;
+        }
+        #embarazo {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #2c5f2d;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .checkbox-container input {
+            width: auto;
+            margin-right: 10px;
+        }
+        .info-box {
+            background-color: #e6f3e6;
+            border-left: 4px solid #4CAF50;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Calculadora de IMC</h1>
+        <input type="number" id="altura" placeholder="Altura en cm" step="0.1">
+        <input type="number" id="peso" placeholder="Peso actual en kg" step="0.1">
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="embarazada" onchange="toggleEmbarazo()">
+            <label for="embarazada">Estoy embarazada</label>
+        </div>
+        
+        <div id="embarazo">
+            <input type="number" id="pesoAntes" placeholder="Peso antes del embarazo (kg)" step="0.1">
+            <input type="number" id="semanaGestacion" placeholder="Semana de gestación actual" step="1" min="1" max="42">
+        </div>
+        
+        <button onclick="calcularIMC()">Calcular IMC</button>
+        <div id="resultado"></div>
+        <div id="escala"></div>
+    </div>
+
+    <script>
+        function toggleEmbarazo() {
+            const checkbox = document.getElementById('embarazada');
+            const embarazoDiv = document.getElementById('embarazo');
+            
+            if (checkbox.checked) {
+                embarazoDiv.style.display = 'block';
+            } else {
+                embarazoDiv.style.display = 'none';
+            }
+        }
+        
+        function calcularIMC() {
+            const altura = document.getElementById('altura').value / 100;
+            const peso = document.getElementById('peso').value;
+            const resultadoDiv = document.getElementById('resultado');
+            const escalaDiv = document.getElementById('escala');
+            
+            // Verificar si está marcada la casilla de embarazo
+            const esEmbarazada = document.getElementById('embarazada').checked;
+            
+            let categoria;
+            let imc;
+            
+            if (esEmbarazada) {
+                // Calcular IMC con peso antes del embarazo
+                const pesoAntes = document.getElementById('pesoAntes').value;
+                const semanaGestacion = document.getElementById('semanaGestacion').value;
+                
+                if (!pesoAntes || !semanaGestacion) {
+                    resultadoDiv.innerHTML = `<div class="info-box">Por favor, complete todos los datos del embarazo.</div>`;
+                    return;
+                }
+                
+                imc = pesoAntes / (altura * altura);
+                
+                if (imc < 18.5) categoria = "Bajo peso";
+                else if (imc < 25) categoria = "Peso normal";
+                else if (imc < 30) categoria = "Sobrepeso";
+                else if (imc < 35) categoria = "Obesidad grado I";
+                else if (imc < 40) categoria = "Obesidad grado II";
+                else categoria = "Obesidad grado III";
+                
+                // Mostrar IMC basado en peso antes del embarazo
+                resultadoDiv.innerHTML = `<div class="info-box">Tu IMC antes del embarazo era ${imc.toFixed(2)}. Categoría: ${categoria}</div>`;
+                
+                // Calcular aumento de peso recomendado
+                let aumentoRecomendadoTotal;
+                let aumentoPrimerTrimestre = 1.5; // Promedio en kg
+                
+                if (imc < 18.5) {
+                    aumentoRecomendadoTotal = 15.4; // Promedio para bajo peso
+                } else if (imc < 25) {
+                    aumentoRecomendadoTotal = 13.6; // Promedio para peso normal
+                } else if (imc < 30) {
+                    aumentoRecomendadoTotal = 9.1; // Promedio para sobrepeso
+                } else {
+                    aumentoRecomendadoTotal = 7.0; // Promedio para obesidad
+                }
+                
+                // Calcular aumento de peso hasta la fecha
+                const aumentoActual = peso - pesoAntes;
+                
+                // Calcular semanas restantes
+                const semanasRestantes = 40 - semanaGestacion;
+                
+                // Calcular aumento recomendado para las semanas restantes
+                let aumentoRecomendadoRestante;
+                
+                if (semanaGestacion <= 13) {
+                    // Primer trimestre
+                    aumentoRecomendadoRestante = aumentoRecomendadoTotal - aumentoActual;
+                } else if (semanaGestacion <= 27) {
+                    // Segundo trimestre
+                    const aumentoEsperadoSegundo = (semanaGestacion - 13) * 0.45; // 0.45 kg por semana
+                    aumentoRecomendadoRestante = aumentoRecomendadoTotal - aumentoPrimerTrimestre - aumentoEsperadoSegundo;
+                } else {
+                    // Tercer trimestre
+                    const aumentoEsperadoSegundo = 14 * 0.45; // 14 semanas en segundo trimestre
+                    const aumentoEsperadoTercer = (semanaGestacion - 27) * 0.5; // 0.5 kg por semana
+                    aumentoRecomendadoRestante = aumentoRecomendadoTotal - aumentoPrimerTrimestre - aumentoEsperadoSegundo - aumentoEsperadoTercer;
+                }
+                
+                // Mostrar recomendaciones
+                let recomendacionHTML = `<div class="info-box">
+                    <h3>Recomendaciones de aumento de peso durante el embarazo:</h3>
+                    <p>Aumento recomendado total: ${aumentoRecomendadoTotal.toFixed(1)} kg</p>
+                    <p>Aumento actual: ${aumentoActual.toFixed(1)} kg</p>`;
+                
+                if (semanasRestantes > 0) {
+                    const aumentoSemanalRecomendado = aumentoRecomendadoRestante / semanasRestantes;
+                    recomendacionHTML += `<p>Aumento recomendado para las próximas ${semanasRestantes} semanas: ${aumentoRecomendadoRestante.toFixed(1)} kg</p>
+                    <p>Esto equivale a aproximadamente ${aumentoSemanalRecomendado.toFixed(2)} kg por semana</p>`;
+                }
+                
+                recomendacionHTML += `</div>`;
+                
+                resultadoDiv.innerHTML += recomendacionHTML;
+                
+            } else {
+                // Cálculo normal de IMC
+                imc = peso / (altura * altura);
+                
+                if (imc < 18.5) categoria = "Bajo peso";
+                else if (imc < 25) categoria = "Peso normal";
+                else if (imc < 30) categoria = "Sobrepeso";
+                else if (imc < 35) categoria = "Obesidad grado I";
+                else if (imc < 40) categoria = "Obesidad grado II";
+                else categoria = "Obesidad grado III";
+
+                resultadoDiv.innerHTML = `Tu IMC es ${imc.toFixed(2)}. Categoría: ${categoria}`;
+            }
+
+            const escalaPesos = [
+                {imc: 18.5, categoria: "Bajo peso"},
+                {imc: 25, categoria: "Peso normal"},
+                {imc: 30, categoria: "Sobrepeso"},
+                {imc: 35, categoria: "Obesidad grado I"},
+                {imc: 40, categoria: "Obesidad grado II"}
+            ];
+
+            let escalaHTML = "<h3>Escala de pesos para tu altura:</h3>";
+            escalaPesos.forEach(punto => {
+                const pesoLimite = (punto.imc * altura * altura).toFixed(1);
+                escalaHTML += `<p>${punto.categoria}: ${pesoLimite} kg</p>`;
+            });
+
+            escalaDiv.innerHTML = escalaHTML;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+@layer base {
+  body {
+    background-color: #f8fafc; /* slate-50 */
+    color: #0f172a; /* slate-900 */
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+/* Custom styles for React Flow to look minimal */
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  background-color: #94a3b8; /* slate-400 */
+  border: 2px solid #ffffff;
+}
+
+.react-flow__edge-path {
+  stroke: #cbd5e1; /* slate-300 */
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #94a3b8;
+}

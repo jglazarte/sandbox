@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdminExptes - Gestión de Expedientes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                }
+            }
+        }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
+    .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    .status-verde { background-color: #10b981; }
+    .status-amarillo { background-color: #f59e0b; }
+    .status-rojo { background-color: #ef4444; }
+    th.sortable:hover { background-color: #f8fafc; cursor: pointer; }
+    /* Scrollbar minimalista */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 shadow-sm py-4 px-6 flex justify-between items-center z-10 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-md">
+        <i class="fa-solid fa-scale-balanced text-xl"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Admin<span class="text-indigo-600">Exptes</span></h1>
+    </div>
+    <div class="flex items-center gap-2 md:gap-4">
+      <button onclick="document.getElementById('file-input').click()" class="text-xs md:text-sm px-3 md:px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors border border-slate-200">
+        <i class="fa-solid fa-file-import md:mr-1"></i> <span class="hidden md:inline">Importar</span>
+      </button>
+      <input type="file" id="file-input" class="hidden" accept=".csv" onchange="importCSV(event)">
+      <button onclick="exportCSV()" class="text-xs md:text-sm px-3 md:px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors border border-slate-200">
+        <i class="fa-solid fa-file-export md:mr-1"></i> <span class="hidden md:inline">Exportar</span>
+      </button>
+      <button onclick="openTeamModal()" class="text-xs md:text-sm px-3 md:px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md transition-colors border border-indigo-200 font-medium">
+        <i class="fa-solid fa-users md:mr-1"></i> <span class="hidden md:inline">Equipo</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- Sidebar: Team -->
+    <aside class="w-64 md:w-72 bg-white border-r border-slate-200 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-0 shrink-0 overflow-y-auto hidden sm:flex">
+      <div class="p-5 border-b border-slate-100">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Resumen del Equipo</h2>
+        <div id="team-list" class="space-y-3">
+          <!-- Team items rendered here -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col p-4 md:p-6 overflow-hidden bg-slate-50 relative">
+      <!-- Toolbar -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 shrink-0">
+        <div class="relative w-full md:w-96">
+          <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="search-input" onkeyup="filterTable()" placeholder="Buscar expediente..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-shadow">
+        </div>
+        <button onclick="openExpedienteModal()" class="w-full md:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
+          <i class="fa-solid fa-plus"></i> Nuevo Expediente
+        </button>
+      </div>
+
+      <!-- Table Container -->
+      <div class="flex-1 glass-card rounded-2xl shadow-sm overflow-hidden flex flex-col border border-slate-200">
+        <div class="overflow-x-auto overflow-y-auto flex-1 relative">
+          <table class="w-full text-left border-collapse min-w-max">
+            <thead class="bg-slate-50/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-10 text-xs uppercase font-semibold text-slate-500 tracking-wider">
+              <tr>
+                <th class="py-3 px-4 sortable whitespace-nowrap" onclick="sortTable('numero')">Número <i class="fa-solid fa-sort ml-1 text-slate-300"></i></th>
+                <th class="py-3 px-4 sortable" onclick="sortTable('caratula')">Carátula <i class="fa-solid fa-sort ml-1 text-slate-300"></i></th>
+                <th class="py-3 px-4">Último Paso</th>
+                <th class="py-3 px-4">Próxima Tarea</th>
+                <th class="py-3 px-4 sortable" onclick="sortTable('responsable')">Responsable <i class="fa-solid fa-sort ml-1 text-slate-300"></i></th>
+                <th class="py-3 px-4 sortable text-center" onclick="sortTable('estado')">Estado <i class="fa-solid fa-sort ml-1 text-slate-300"></i></th>
+                <th class="py-3 px-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="expedientes-body" class="divide-y divide-slate-100 bg-white">
+              <!-- Rows rendered here -->
+            </tbody>
+          </table>
+          <div id="empty-state" class="hidden flex flex-col items-center justify-center h-64 text-slate-400">
+            <i class="fa-regular fa-folder-open text-4xl mb-3 text-slate-300"></i>
+            <p>No hay expedientes para mostrar</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Modal: Editar/Agregar Expediente -->
+  <div id="expediente-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform duration-300" id="expediente-modal-content">
+      <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <h3 class="text-lg font-bold text-slate-800" id="modal-title">Nuevo Expediente</h3>
+        <button type="button" onclick="closeExpedienteModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-6">
+        <form id="expediente-form" onsubmit="saveExpediente(event)">
+          <input type="hidden" id="exp-id">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Número</label>
+              <input type="text" id="exp-numero" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Responsable</label>
+              <select id="exp-responsable" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+                <!-- Options dynamically -->
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Carátula</label>
+            <input type="text" id="exp-caratula" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Último Paso</label>
+            <input type="text" id="exp-ultimo" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Próxima Tarea</label>
+            <input type="text" id="exp-proxima" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-xs font-semibold text-slate-500 mb-2">Estado</label>
+            <div class="flex gap-2 sm:gap-4">
+              <label class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 cursor-pointer p-2 border border-slate-200 rounded-lg flex-1 justify-center hover:bg-slate-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 transition-colors">
+                <input type="radio" name="exp-estado" value="verde" class="hidden" checked>
+                <span class="status-dot status-verde"></span> <span class="text-xs sm:text-sm font-medium text-slate-700">En plazo</span>
+              </label>
+              <label class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 cursor-pointer p-2 border border-slate-200 rounded-lg flex-1 justify-center hover:bg-slate-50 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50 transition-colors">
+                <input type="radio" name="exp-estado" value="amarillo" class="hidden">
+                <span class="status-dot status-amarillo"></span> <span class="text-xs sm:text-sm font-medium text-slate-700">Atención</span>
+              </label>
+              <label class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 cursor-pointer p-2 border border-slate-200 rounded-lg flex-1 justify-center hover:bg-slate-50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 transition-colors">
+                <input type="radio" name="exp-estado" value="rojo" class="hidden">
+                <span class="status-dot status-rojo"></span> <span class="text-xs sm:text-sm font-medium text-slate-700">Urgente</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <button type="button" onclick="closeExpedienteModal()" class="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-md transition-colors">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Gestionar Equipo -->
+  <div id="team-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300" id="team-modal-content">
+      <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <h3 class="text-lg font-bold text-slate-800">Gestionar Equipo</h3>
+        <button onclick="closeTeamModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-6">
+        <div class="flex gap-2 mb-4">
+          <input type="text" id="new-member" placeholder="Nombre del integrante" class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50" onkeydown="if(event.key === 'Enter') addTeamMember()">
+          <button onclick="addTeamMember()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors">Agregar</button>
+        </div>
+        
+        <div class="max-h-60 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100" id="team-modal-list">
+          <!-- Team list in modal rendered here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lógica JavaScript -->
+  <script>
+    // --- ESTADO INICIAL ---
+    let appData = {
+      equipo: ["Sin asignar"],
+      expedientes: []
+    };
+    
+    let sortColumn = '';
+    let sortAsc = true;
+
+    // --- CARGA DE DATOS ---
+    function init() {
+      const stored = localStorage.getItem('adminexptes_data');
+      if (stored) {
+        try {
+          appData = JSON.parse(stored);
+        } catch (e) {
+          console.error("Error al leer datos:", e);
+        }
+      }
+      if(!appData.equipo.includes("Sin asignar")) {
+        appData.equipo.unshift("Sin asignar");
+      }
+      
+      renderTeam();
+      renderTable();
+      updateResponsablesDropdown();
+    }
+
+    function saveData() {
+      localStorage.setItem('adminexptes_data', JSON.stringify(appData));
+      renderTeam();
+    }
+
+    // --- RENDERIZADO DE EQUIPO ---
+    function renderTeam() {
+      const list = document.getElementById('team-list');
+      list.innerHTML = '';
+      
+      appData.equipo.forEach(miembro => {
+        const exps = appData.expedientes.filter(e => e.responsable === miembro);
+        const verde = exps.filter(e => e.estado === 'verde').length;
+        const amarillo = exps.filter(e => e.estado === 'amarillo').length;
+        const rojo = exps.filter(e => e.estado === 'rojo').length;
+        
+        if (miembro === "Sin asignar" && exps.length === 0) return;
+
+        const el = document.createElement('div');
+        el.className = 'bg-slate-50 rounded-xl p-3 border border-slate-100 flex flex-col gap-2 hover:bg-indigo-50 transition-colors cursor-pointer group';
+        el.onclick = () => { 
+            const search = document.getElementById('search-input');
+            search.value = search.value === miembro ? '' : miembro; 
+            filterTable(); 
+        };
+        el.innerHTML = `
+          <div class="font-semibold text-sm text-slate-700 truncate group-hover:text-indigo-700 transition-colors" title="${miembro}">${miembro}</div>
+          <div class="flex gap-2">
+            <div class="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-100 text-emerald-800 rounded-md font-medium flex-1 justify-center" title="En plazo">
+              <span class="status-dot status-verde w-2 h-2 shadow-none"></span> ${verde}
+            </div>
+            <div class="flex items-center gap-1 text-xs px-2 py-1 bg-amber-100 text-amber-800 rounded-md font-medium flex-1 justify-center" title="Prestar atención">
+              <span class="status-dot status-amarillo w-2 h-2 shadow-none"></span> ${amarillo}
+            </div>
+            <div class="flex items-center gap-1 text-xs px-2 py-1 bg-rose-100 text-rose-800 rounded-md font-medium flex-1 justify-center" title="Urgente">
+              <span class="status-dot status-rojo w-2 h-2 shadow-none"></span> ${rojo}
+            </div>
+          </div>
+        `;
+        list.appendChild(el);
+      });
+      
+      // Update Modal list
+      const modalList = document.getElementById('team-modal-list');
+      modalList.innerHTML = '';
+      appData.equipo.forEach(miembro => {
+        if(miembro === "Sin asignar") return;
+        
+        const div = document.createElement('div');
+        div.className = 'flex justify-between items-center p-3 hover:bg-slate-50';
+        div.innerHTML = `
+          <span class="text-sm font-medium text-slate-700">${miembro}</span>
+          <button onclick="removeTeamMember('${miembro}')" class="text-slate-400 hover:text-rose-500 p-1 transition-colors" title="Eliminar miembro">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        `;
+        modalList.appendChild(div);
+      });
+    }
+
+    // --- RENDERIZADO DE TABLA ---
+    function renderTable(data = null) {
+      const tbody = document.getElementById('expedientes-body');
+      tbody.innerHTML = '';
+      
+      const expedientes = data || appData.expedientes;
+      
+      if (expedientes.length === 0) {
+        document.getElementById('empty-state').classList.remove('hidden');
+      } else {
+        document.getElementById('empty-state').classList.add('hidden');
+      }
+
+      expedientes.forEach(exp => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-indigo-50/30 transition-colors group';
+        
+        let statusClass, statusBg;
+        if(exp.estado === 'verde') { statusClass = 'status-verde'; statusBg = 'bg-emerald-50 text-emerald-700 border-emerald-100'; }
+        else if(exp.estado === 'amarillo') { statusClass = 'status-amarillo'; statusBg = 'bg-amber-50 text-amber-700 border-amber-100'; }
+        else { statusClass = 'status-rojo'; statusBg = 'bg-rose-50 text-rose-700 border-rose-100'; }
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 text-sm font-semibold text-slate-800 whitespace-nowrap">${exp.numero || '-'}</td>
+          <td class="py-3 px-4 text-sm text-slate-600 max-w-[200px] sm:max-w-xs truncate" title="${exp.caratula}">${exp.caratula || '-'}</td>
+          <td class="py-3 px-4 text-sm text-slate-500 max-w-[150px] truncate" title="${exp.ultimoPaso}">${exp.ultimoPaso || '-'}</td>
+          <td class="py-3 px-4 text-sm text-slate-500 max-w-[150px] truncate" title="${exp.proximaTarea}">${exp.proximaTarea || '-'}</td>
+          <td class="py-3 px-4 text-sm text-slate-600 font-medium">
+            <span class="px-2.5 py-1 bg-slate-100 rounded-md border border-slate-200 text-xs">${exp.responsable || 'Sin asignar'}</span>
+          </td>
+          <td class="py-3 px-4 text-center">
+            <div class="inline-flex items-center justify-center w-8 h-8 rounded-full ${statusBg} border group-hover:shadow-sm transition-all cursor-help" title="${exp.estado}">
+              <span class="status-dot ${statusClass}"></span>
+            </div>
+          </td>
+          <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+            <button onclick="openExpedienteModal('${exp.id}')" class="text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-md hover:bg-indigo-50" title="Editar">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button onclick="deleteExpediente('${exp.id}')" class="text-slate-400 hover:text-rose-600 transition-colors p-1.5 rounded-md hover:bg-rose-50" title="Eliminar">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- ORDENAR Y FILTRAR ---
+    function sortTable(column) {
+      if (sortColumn === column) {
+        sortAsc = !sortAsc;
+      } else {
+        sortColumn = column;
+        sortAsc = true;
+      }
+      
+      const valMap = { 'verde': 1, 'amarillo': 2, 'rojo': 3 };
+
+      appData.expedientes.sort((a, b) => {
+        let valA = a[column] ? a[column].toString().toLowerCase() : '';
+        let valB = b[column] ? b[column].toString().toLowerCase() : '';
+        
+        if(column === 'estado') {
+          valA = valMap[a.estado] || 0;
+          valB = valMap[b.estado] || 0;
+        }
+
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+      });
+
+      filterTable();
+    }
+
+    function filterTable() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      if (!q) {
+        renderTable();
+        return;
+      }
+      const filtered = appData.expedientes.filter(exp => {
+        return (exp.numero && exp.numero.toLowerCase().includes(q)) ||
+               (exp.caratula && exp.caratula.toLowerCase().includes(q)) ||
+               (exp.responsable && exp.responsable.toLowerCase().includes(q)) ||
+               (exp.ultimoPaso && exp.ultimoPaso.toLowerCase().includes(q)) ||
+               (exp.proximaTarea && exp.proximaTarea.toLowerCase().includes(q));
+      });
+      renderTable(filtered);
+    }
+
+    // --- GESTIÓN DE EXPEDIENTES ---
+    function openExpedienteModal(id = null) {
+      const modal = document.getElementById('expediente-modal');
+      const content = document.getElementById('expediente-modal-content');
+      
+      document.getElementById('expediente-form').reset();
+      updateResponsablesDropdown();
+      
+      if (id) {
+        document.getElementById('modal-title').innerText = "Editar Expediente";
+        const exp = appData.expedientes.find(e => e.id === id);
+        if(exp) {
+          document.getElementById('exp-id').value = exp.id;
+          document.getElementById('exp-numero').value = exp.numero || '';
+          document.getElementById('exp-caratula').value = exp.caratula || '';
+          document.getElementById('exp-ultimo').value = exp.ultimoPaso || '';
+          document.getElementById('exp-proxima').value = exp.proximaTarea || '';
+          document.getElementById('exp-responsable').value = exp.responsable || 'Sin asignar';
+          const radio = document.querySelector(`input[name="exp-estado"][value="${exp.estado}"]`);
+          if(radio) radio.checked = true;
+        }
+      } else {
+        document.getElementById('modal-title').innerText = "Nuevo Expediente";
+        document.getElementById('exp-id').value = '';
+      }
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        content.classList.remove('scale-95');
+      }, 10);
+      
+      // Auto-focus numero
+      setTimeout(() => document.getElementById('exp-numero').focus(), 100);
+    }
+
+    function closeExpedienteModal() {
+      const modal = document.getElementById('expediente-modal');
+      const content = document.getElementById('expediente-modal-content');
+      
+      modal.classList.add('opacity-0');
+      content.classList.add('scale-95');
+      
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    function saveExpediente(e) {
+      e.preventDefault();
+      const id = document.getElementById('exp-id').value;
+      
+      const newExp = {
+        id: id || Date.now().toString(),
+        numero: document.getElementById('exp-numero').value.trim(),
+        caratula: document.getElementById('exp-caratula').value.trim(),
+        ultimoPaso: document.getElementById('exp-ultimo').value.trim(),
+        proximaTarea: document.getElementById('exp-proxima').value.trim(),
+        responsable: document.getElementById('exp-responsable').value,
+        estado: document.querySelector('input[name="exp-estado"]:checked').value
+      };
+
+      if (id) {
+        const index = appData.expedientes.findIndex(e => e.id === id);
+        if(index > -1) appData.expedientes[index] = newExp;
+      } else {
+        appData.expedientes.push(newExp);
+      }
+
+      saveData();
+      filterTable();
+      closeExpedienteModal();
+    }
+
+    function deleteExpediente(id) {
+      if(confirm('¿Estás seguro de que deseas eliminar este expediente?')) {
+        appData.expedientes = appData.expedientes.filter(e => e.id !== id);
+        saveData();
+        filterTable();
+      }
+    }
+
+    // --- GESTIÓN DE EQUIPO ---
+    function openTeamModal() {
+      const modal = document.getElementById('team-modal');
+      const content = document.getElementById('team-modal-content');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        content.classList.remove('scale-95');
+      }, 10);
+      setTimeout(() => document.getElementById('new-member').focus(), 100);
+    }
+
+    function closeTeamModal() {
+      const modal = document.getElementById('team-modal');
+      const content = document.getElementById('team-modal-content');
+      modal.classList.add('opacity-0');
+      content.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    function updateResponsablesDropdown() {
+      const select = document.getElementById('exp-responsable');
+      const currentVal = select.value;
+      select.innerHTML = '';
+      appData.equipo.forEach(miembro => {
+        const opt = document.createElement('option');
+        opt.value = miembro;
+        opt.innerText = miembro;
+        select.appendChild(opt);
+      });
+      if(appData.equipo.includes(currentVal)) {
+        select.value = currentVal;
+      }
+    }
+
+    function addTeamMember() {
+      const input = document.getElementById('new-member');
+      const name = input.value.trim();
+      if(name && !appData.equipo.includes(name)) {
+        appData.equipo.push(name);
+        saveData();
+        input.value = '';
+        updateResponsablesDropdown();
+      }
+    }
+
+    function removeTeamMember(name) {
+      if(confirm(`¿Eliminar a ${name}? Sus expedientes pasarán a "Sin asignar".`)) {
+        appData.equipo = appData.equipo.filter(m => m !== name);
+        appData.expedientes.forEach(e => {
+          if(e.responsable === name) e.responsable = "Sin asignar";
+        });
+        saveData();
+        updateResponsablesDropdown();
+        filterTable();
+      }
+    }
+
+    // --- EXPORTAR E IMPORTAR CSV ---
+    function exportCSV() {
+      if(appData.expedientes.length === 0) {
+        alert("No hay datos para exportar.");
+        return;
+      }
+
+      const headers = ["ID", "Número", "Carátula", "Último Paso", "Próxima Tarea", "Responsable", "Estado"];
+      const csvRows = [];
+      csvRows.push(headers.join(';')); // Punto y coma para mejor compatibilidad con Excel local
+
+      appData.expedientes.forEach(exp => {
+        const row = [
+          exp.id,
+          `"${(exp.numero || '').replace(/"/g, '""')}"`,
+          `"${(exp.caratula || '').replace(/"/g, '""')}"`,
+          `"${(exp.ultimoPaso || '').replace(/"/g, '""')}"`,
+          `"${(exp.proximaTarea || '').replace(/"/g, '""')}"`,
+          `"${(exp.responsable || '').replace(/"/g, '""')}"`,
+          exp.estado
+        ];
+        csvRows.push(row.join(';'));
+      });
+
+      const csvString = csvRows.join('\n');
+      const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `expedientes_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function importCSV(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        if(lines.length < 2) {
+          alert("El archivo parece estar vacío o no tiene el formato correcto.");
+          return;
+        }
+
+        const delim = lines[0].includes(';') ? ';' : ',';
+        let importedCount = 0;
+        
+        for (let i = 1; i < lines.length; i++) {
+          const regex = new RegExp(`${delim}(?=(?:(?:[^"]*"){2})*[^"]*$)`);
+          let row = lines[i].split(regex);
+          row = row.map(cell => cell.replace(/^"(.*)"$/, '$1').replace(/""/g, '"'));
+          
+          if (row.length >= 7) {
+            const id = row[0] || Date.now().toString() + Math.random().toString(36).substr(2, 5);
+            const exp = {
+              id: id,
+              numero: row[1],
+              caratula: row[2],
+              ultimoPaso: row[3],
+              proximaTarea: row[4],
+              responsable: row[5] || 'Sin asignar',
+              estado: row[6] || 'verde'
+            };
+
+            if(exp.responsable && !appData.equipo.includes(exp.responsable)) {
+              appData.equipo.push(exp.responsable);
+            }
+
+            const index = appData.expedientes.findIndex(e => e.id === id);
+            if (index > -1) {
+              appData.expedientes[index] = exp;
+            } else {
+              appData.expedientes.push(exp);
+            }
+            importedCount++;
+          }
+        }
+        
+        saveData();
+        filterTable();
+        updateResponsablesDropdown();
+        alert(`Se importaron ${importedCount} expedientes correctamente.`);
+      };
+      reader.readAsText(file);
+      event.target.value = ''; // Permite importar el mismo archivo de nuevo si es necesario
+    }
+
+    // Inicializar app
+    init();
+
+    // Close modals on click outside
+    document.getElementById('expediente-modal').addEventListener('click', function(e) {
+        if(e.target === this) closeExpedienteModal();
+    });
+    document.getElementById('team-modal').addEventListener('click', function(e) {
+        if(e.target === this) closeTeamModal();
+    });
+  </script>
+</body>
+</html>

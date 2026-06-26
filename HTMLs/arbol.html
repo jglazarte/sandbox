@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Árbol Genealógico Judicial - V4</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --line-color: #888;
+        }
+
+        /* Paleta de colores para resaltar roles */
+        .col-default { border-color: #b2cecf !important; background-color: #ffffff; }
+        .col-actor { border-color: #28a745 !important; background-color: #e6f4ea; } /* Verde */
+        .col-demandado { border-color: #fd7e14 !important; background-color: #fff3e6; } /* Naranja */
+        .col-fallecido { border-color: #6c757d !important; background-color: #f2f2f2; color: #666; } /* Gris */
+        .col-importante { border-color: #007bff !important; background-color: #e7f1ff; } /* Azul */
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg-color); margin: 0; padding: 20px; font-size: 11px; }
+
+        .toolbar { position: sticky; top: 0; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 1000; display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        
+        button { padding: 4px 10px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #fff; }
+        button:hover { background: #f0f0f0; }
+        .btn-main { background: #007bff; color: white; border: none; }
+
+        .tree-container { display: flex; justify-content: center; padding: 20px; }
+        .tree ul { padding-top: 20px; position: relative; display: flex; justify-content: center; }
+        .tree li { text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; }
+
+        /* Conectores */
+        .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid var(--line-color); width: 50%; height: 20px; }
+        .tree li::after { right: auto; left: 50%; border-left: 2px solid var(--line-color); }
+        .tree li:only-child::after, .tree li:only-child::before { display: none; }
+        .tree li:only-child { padding-top: 0; }
+        .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+        .tree li:last-child::before { border-right: 2px solid var(--line-color); border-radius: 0 5px 0 0; }
+        .tree li:first-child::after { border-radius: 5px 0 0 0; }
+        .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid var(--line-color); height: 20px; }
+
+        /* Layout Lateral Persona-Parejas */
+        .family-group { display: flex; align-items: center; justify-content: center; }
+        .node-main { border: 2px solid; border-radius: 6px; padding: 8px; min-width: 100px; z-index: 5; position: relative; }
+        .partners-aside { display: flex; flex-direction: column; gap: 8px; margin-left: 25px; position: relative; }
+        
+        /* Línea de unión lateral */
+        .partners-aside::before { content: ''; position: absolute; left: -25px; top: 50%; width: 25px; border-top: 1.5px dashed #666; }
+
+        .node-partner { border: 2px solid; border-radius: 6px; padding: 6px; min-width: 90px; text-align: left; background: #fff; }
+        
+        .name { font-weight: bold; display: block; margin-bottom: 2px; }
+        .notes { font-size: 9px; color: #555; font-style: italic; display: block; }
+        .label-orig { font-size: 8px; text-transform: uppercase; color: #999; margin-bottom: 4px; display: block; }
+
+        /* Controles */
+        .controls { margin-top: 5px; border-top: 1px solid #eee; padding-top: 4px; display: flex; justify-content: space-around; }
+        .btn-del { color: red; font-weight: bold; }
+
+        /* Modal */
+        #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 30px rgba(0,0,0,0.3); z-index: 2000; width: 300px; }
+        .color-opt { display: inline-block; width: 20px; height: 20px; margin-right: 5px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+        .color-opt.selected { border-color: black; }
+
+        @media print { .toolbar, .controls, button, #modal { display: none !important; } }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <button class="btn-main" onclick="window.print()">📄 Exportar PDF</button>
+    <button onclick="resetAll()">🗑️ Reiniciar Todo</button>
+</div>
+
+<div class="tree-container">
+    <div id="tree-root" class="tree"></div>
+</div>
+
+<div id="modal">
+    <h3>Editar Persona</h3>
+    <input type="text" id="m-name" placeholder="Nombre/Carátula" style="width:100%; margin-bottom:10px;">
+    <textarea id="m-notes" placeholder="Notas (fechas, DNI, estado...)" style="width:100%; height:60px;"></textarea>
+    
+    <div style="margin: 10px 0;">
+        <label>Resaltar con color:</label><br>
+        <div id="color-picker" style="margin-top:5px;">
+            <div class="color-opt col-default" onclick="selectColor('col-default')" title="Estándar"></div>
+            <div class="color-opt col-actor" onclick="selectColor('col-actor')" title="Actor"></div>
+            <div class="color-opt col-demandado" onclick="selectColor('col-demandado')" title="Demandado"></div>
+            <div class="color-opt col-fallecido" onclick="selectColor('col-fallecido')" title="Fallecido"></div>
+            <div class="color-opt col-importante" onclick="selectColor('col-importante')" title="Importante"></div>
+        </div>
+    </div>
+
+    <div style="text-align:right;">
+        <button onclick="saveModal()" class="btn-main">Guardar</button>
+        <button onclick="document.getElementById('modal').style.display='none'">Cancelar</button>
+    </div>
+</div>
+
+<script>
+    let familyData = JSON.parse(localStorage.getItem('arbol_v4')) || {
+        id: "root",
+        name: "Persona Origen",
+        notes: "",
+        color: "col-default",
+        children: [], // Hijos directos (sin pareja)
+        partners: []
+    };
+
+    let currentEdit = null;
+    let selectedColor = 'col-default';
+
+    function render() {
+        const root = document.getElementById('tree-root');
+        root.innerHTML = '';
+        const ul = document.createElement('ul');
+        ul.appendChild(createNode(familyData));
+        root.appendChild(ul);
+        localStorage.setItem('arbol_v4', JSON.stringify(familyData));
+    }
+
+    function createNode(person) {
+        const li = document.createElement('li');
+        const group = document.createElement('div');
+        group.className = 'family-group';
+
+        // Nodo Principal
+        const pDiv = document.createElement('div');
+        pDiv.className = `node-main ${person.color || 'col-default'}`;
+        pDiv.innerHTML = `
+            <span class="name">${person.name}</span>
+            <span class="notes">${person.notes}</span>
+            <div class="controls">
+                <span onclick="openEdit('${person.id}')" style="cursor:pointer">📝</span>
+                <span onclick="deleteNode('${person.id}')" class="btn-del" style="cursor:pointer">×</span>
+            </div>
+            <div style="margin-top:5px">
+                <button onclick="addPartner('${person.id}')" title="Agregar Cónyuge/Pareja">+💍</button>
+                <button onclick="addChild('${person.id}', null)" title="Agregar hijo directo sin pareja">+👶</button>
+            </div>
+        `;
+        group.appendChild(pDiv);
+
+        // Parejas al costado
+        if (person.partners.length > 0) {
+            const pStack = document.createElement('div');
+            pStack.className = 'partners-aside';
+            person.partners.forEach((p, idx) => {
+                const pCard = document.createElement('div');
+                pCard.className = `node-partner ${p.color || 'col-default'}`;
+                pCard.innerHTML = `
+                    <span class="label-orig">Pareja ${idx + 1}</span>
+                    <span class="name">💍 ${p.name}</span>
+                    <span class="notes">${p.notes}</span>
+                    <div class="controls">
+                        <span onclick="openEdit('${person.id}', ${idx})" style="cursor:pointer">📝</span>
+                        <span onclick="deletePartner('${person.id}', ${idx})" class="btn-del" style="cursor:pointer">×</span>
+                    </div>
+                    <button onclick="addChild('${person.id}', ${idx})" style="width:100%; margin-top:5px">+ Agregar Hijo</button>
+                `;
+                pStack.appendChild(pCard);
+            });
+            group.appendChild(pStack);
+        }
+        li.appendChild(group);
+
+        // Hijos (Debajo)
+        // Combinamos hijos directos e hijos de parejas para el renderizado
+        let branchChildren = [...(person.children || [])];
+        person.partners.forEach(p => {
+            if (p.children) branchChildren.push(...p.children);
+        });
+
+        if (branchChildren.length > 0) {
+            const ul = document.createElement('ul');
+            branchChildren.forEach(child => {
+                ul.appendChild(createNode(child));
+            });
+            li.appendChild(ul);
+        }
+
+        return li;
+    }
+
+    // --- Lógica ---
+    function find(node, id) {
+        if (node.id === id) return node;
+        if (node.children) {
+            for (let c of node.children) { let r = find(c, id); if (r) return r; }
+        }
+        for (let p of node.partners) {
+            for (let c of p.children) { let r = find(c, id); if (r) return r; }
+        }
+        return null;
+    }
+
+    function addChild(parentId, partnerIdx) {
+        const parent = find(familyData, parentId);
+        const newChild = { id: "id" + Date.now(), name: "Nuevo Hijo/a", notes: "", color: "col-default", children: [], partners: [] };
+        
+        if (partnerIdx === null) {
+            if (!parent.children) parent.children = [];
+            parent.children.push(newChild);
+        } else {
+            parent.partners[partnerIdx].children.push(newChild);
+        }
+        render();
+    }
+
+    function addPartner(id) {
+        const p = find(familyData, id);
+        p.partners.push({ name: "Nueva Pareja", notes: "", color: "col-default", children: [] });
+        render();
+    }
+
+    function openEdit(id, pIdx = null) {
+        const person = find(familyData, id);
+        currentEdit = { id, pIdx };
+        const target = pIdx === null ? person : person.partners[pIdx];
+        
+        document.getElementById('m-name').value = target.name;
+        document.getElementById('m-notes').value = target.notes;
+        selectColor(target.color || 'col-default');
+        document.getElementById('modal').style.display = 'block';
+    }
+
+    function selectColor(cls) {
+        selectedColor = cls;
+        document.querySelectorAll('.color-opt').forEach(el => {
+            el.classList.remove('selected');
+            if(el.classList.contains(cls)) el.classList.add('selected');
+        });
+    }
+
+    function saveModal() {
+        const person = find(familyData, currentEdit.id);
+        const target = currentEdit.pIdx === null ? person : person.partners[currentEdit.pIdx];
+        target.name = document.getElementById('m-name').value;
+        target.notes = document.getElementById('m-notes').value;
+        target.color = selectedColor;
+        document.getElementById('modal').style.display = 'none';
+        render();
+    }
+
+    function deleteNode(id) {
+        if (id === 'root') return;
+        if (!confirm("¿Eliminar persona y toda su rama?")) return;
+        const remove = (node) => {
+            // Buscar en hijos directos
+            let idx = node.children.findIndex(c => c.id === id);
+            if (idx > -1) { node.children.splice(idx, 1); return true; }
+            for (let c of node.children) if (remove(c)) return true;
+            // Buscar en hijos de parejas
+            for (let p of node.partners) {
+                let idxP = p.children.findIndex(c => c.id === id);
+                if (idxP > -1) { p.children.splice(idxP, 1); return true; }
+                for (let c of p.children) if (remove(c)) return true;
+            }
+            return false;
+        };
+        remove(familyData);
+        render();
+    }
+
+    function deletePartner(pid, pIdx) {
+        if (confirm("¿Eliminar pareja y sus hijos?")) {
+            find(familyData, pid).partners.splice(pIdx, 1);
+            render();
+        }
+    }
+
+    function resetAll() {
+        if (confirm("¿Borrar todo el árbol definitivamente?")) { localStorage.clear(); location.reload(); }
+    }
+
+    render();
+</script>
+
+</body>
+</html>

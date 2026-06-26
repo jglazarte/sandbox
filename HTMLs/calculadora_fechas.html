@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Fechas</title>
+    <meta name="description" content="Calcula la diferencia en años, meses y días entre dos fechas.">
+    <!-- Import Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --accent-gradient: linear-gradient(to right, #38bdf8, #818cf8);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+        }
+
+        .calculator-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin: 20px;
+        }
+
+        .calculator-card:hover {
+            transform: translateY(-4px);
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 32px;
+            text-align: center;
+            margin-bottom: 40px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .input-group {
+            margin-bottom: 28px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input[type="date"] {
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) hue-rotate(180deg) opacity(0.7);
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+
+        input[type="date"]:hover::-webkit-calendar-picker-indicator {
+            opacity: 1;
+        }
+
+        input[type="date"]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .result-container {
+            margin-top: 40px;
+            padding-top: 32px;
+            border-top: 1px dashed var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(15px);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .result-container.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .result-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result-value {
+            font-size: 42px;
+            font-weight: 700;
+            background: var(--text-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+
+        .result-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 30px;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .empty-state.hide {
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .calculator-card {
+                padding: 32px 24px;
+            }
+            .result-value {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="calculator-card">
+        <h1>Diferencia de Fechas</h1>
+        
+        <div class="input-group">
+            <label for="date1">Fecha Inicial</label>
+            <div class="input-wrapper">
+                <input type="date" id="date1" name="date1">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="date2">Fecha Final</label>
+            <div class="input-wrapper">
+                <input type="date" id="date2" name="date2">
+            </div>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+            Selecciona ambas fechas para ver la diferencia.
+        </div>
+
+        <div id="resultContainer" class="result-container">
+            <div class="result-item">
+                <span class="result-value" id="resYears">0</span>
+                <span class="result-label">Años</span>
+            </div>
+            <div class="result-item">
+                <span class="result-value" id="resMonths">0</span>
+                <span class="result-label">Meses</span>
+            </div>
+            <div class="result-item">
+                <span class="result-value" id="resDays">0</span>
+                <span class="result-label">Días</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const date1Input = document.getElementById('date1');
+        const date2Input = document.getElementById('date2');
+        const resultContainer = document.getElementById('resultContainer');
+        const emptyState = document.getElementById('emptyState');
+        const resYears = document.getElementById('resYears');
+        const resMonths = document.getElementById('resMonths');
+        const resDays = document.getElementById('resDays');
+
+        // Set default values (e.g., today for date2)
+        const today = new Date();
+        date2Input.value = today.toISOString().split('T')[0];
+
+        function calculateDifference() {
+            if (!date1Input.value || !date2Input.value) {
+                resultContainer.classList.remove('show');
+                emptyState.classList.remove('hide');
+                return;
+            }
+
+            let d1 = new Date(date1Input.value);
+            let d2 = new Date(date2Input.value);
+
+            // Correct timezone offset issues if any by resetting time to midnight local
+            d1.setHours(0,0,0,0);
+            d2.setHours(0,0,0,0);
+
+            // Swap if d1 is after d2
+            if (d1 > d2) {
+                const temp = d1;
+                d1 = d2;
+                d2 = temp;
+            }
+
+            let years = d2.getFullYear() - d1.getFullYear();
+            let months = d2.getMonth() - d1.getMonth();
+            let days = d2.getDate() - d1.getDate();
+
+            if (days < 0) {
+                months--;
+                // Get days in the previous month of d2
+                const prevMonth = new Date(d2.getFullYear(), d2.getMonth(), 0);
+                days += prevMonth.getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            // Animate numbers (simple instantaneous update here, CSS handles container fade in)
+            resYears.textContent = years;
+            resMonths.textContent = months;
+            resDays.textContent = days;
+
+            emptyState.classList.add('hide');
+            resultContainer.classList.add('show');
+        }
+
+        date1Input.addEventListener('input', calculateDifference);
+        date2Input.addEventListener('input', calculateDifference);
+        
+        // Initial check
+        calculateDifference();
+    </script>
+</body>
+</html>

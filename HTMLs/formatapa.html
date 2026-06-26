@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Citas APA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Modo Claro (Default) */
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --border: #e2e8f0;
+            --ring: rgba(37, 99, 235, 0.2);
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* Modo Oscuro */
+                --bg-color: #0f172a;
+                --card-bg: #1e293b;
+                --text-main: #f8fafc;
+                --text-muted: #94a3b8;
+                --primary: #3b82f6;
+                --primary-hover: #60a5fa;
+                --border: #334155;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1.5rem;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 640px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 2.5rem;
+            border: 1px solid var(--border);
+            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.85rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        textarea {
+            width: 100%;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 120px;
+            transition: all 0.2s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--ring);
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0.875rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px rgba(37, 99, 235, 0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0) scale(0.98);
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn svg {
+            margin-right: 0.5rem;
+            width: 20px;
+            height: 20px;
+        }
+
+        .result-container {
+            margin-top: 2rem;
+            display: none;
+            animation: slideDown 0.4s ease forwards;
+        }
+
+        .result-container.visible {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .divider {
+            height: 1px;
+            background-color: var(--border);
+            margin: 2rem 0;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            margin-top: 1rem;
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg-color);
+            box-shadow: none;
+            transform: translateY(0);
+        }
+
+        .btn-secondary.success {
+            border-color: var(--success);
+            color: var(--success);
+            background-color: rgba(16, 185, 129, 0.05);
+        }
+        
+        .hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.6rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .hint svg {
+            width: 14px;
+            height: 14px;
+            margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>Generador APA</h1>
+                <p>Ingresa una cita en cualquier formato y la estructuraremos mágicamente a formato APA.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="inputCitation">Cita original</label>
+                <textarea id="inputCitation" placeholder="Ej: Perez, Juan. 'El libro de la vida', 2021. Editorial Planeta."></textarea>
+            </div>
+
+            <button class="btn" id="convertBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+                Convertir a Formato APA
+            </button>
+
+            <div class="result-container" id="resultContainer">
+                <div class="divider"></div>
+                <div class="form-group">
+                    <label for="outputCitation">Resultado en formato APA</label>
+                    <textarea id="outputCitation"></textarea>
+                    <p class="hint">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Puedes editar el resultado manualmente si la IA heurística omitió algún detalle.
+                    </p>
+                </div>
+                
+                <button class="btn btn-secondary" id="copyBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" id="copyIcon">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span id="copyText">Copiar al portapapeles</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const convertBtn = document.getElementById('convertBtn');
+            const inputCitation = document.getElementById('inputCitation');
+            const outputCitation = document.getElementById('outputCitation');
+            const resultContainer = document.getElementById('resultContainer');
+            const copyBtn = document.getElementById('copyBtn');
+            const copyText = document.getElementById('copyText');
+            const copyIcon = document.getElementById('copyIcon');
+
+            convertBtn.addEventListener('click', () => {
+                const text = inputCitation.value.trim();
+                if (!text) return;
+
+                const apa = convertToAPA(text);
+                outputCitation.value = apa;
+                
+                resultContainer.classList.add('visible');
+                
+                // Scroll suave hacia abajo
+                setTimeout(() => {
+                    resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 50);
+            });
+
+            copyBtn.addEventListener('click', () => {
+                const text = outputCitation.value;
+                if (!text) return;
+
+                navigator.clipboard.writeText(text).then(() => {
+                    copyBtn.classList.add('success');
+                    copyText.textContent = '¡Copiado!';
+                    copyIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
+                    
+                    setTimeout(() => {
+                        copyBtn.classList.remove('success');
+                        copyText.textContent = 'Copiar al portapapeles';
+                        copyIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />';
+                    }, 2500);
+                });
+            });
+
+            function convertToAPA(text) {
+                let year = "s.f.";
+                const yearMatch = text.match(/(?:19|20)\d{2}/);
+                if (yearMatch) {
+                    year = yearMatch[0];
+                }
+
+                // Removemos el año y caracteres envolventes comunes para aislar los demás campos
+                let cleanedText = text.replace(new RegExp(`[\\(\\[]?${year}[\\)\\]]?`), '').replace(/\s+/g, ' ').trim();
+
+                // Separamos por comillas, puntos y comas grandes que suelen separar campos
+                const parts = cleanedText.split(/(?:\.\s+|\"|\”|\“|;\s+)/).map(s => s.trim()).filter(s => s.length > 2);
+                
+                let authorPart = "";
+                let titlePart = "";
+                let publisherPart = "";
+
+                if (parts.length >= 1) authorPart = parts[0];
+                if (parts.length >= 2) titlePart = parts[1];
+                if (parts.length >= 3) publisherPart = parts.slice(2).join(', ');
+
+                // Heurística de Autor (Apellido, Inicial.)
+                let formattedAuthor = authorPart;
+                if (authorPart) {
+                    if (authorPart.includes(',')) {
+                        // Ya parece tener formato "Apellido, Nombre"
+                        let nameParts = authorPart.split(',');
+                        let lastName = nameParts[0].trim();
+                        let firstNames = nameParts[1].trim().split(' ').filter(n => n);
+                        let initials = firstNames.map(n => n.charAt(0).toUpperCase() + '.').join(' ');
+                        formattedAuthor = `${lastName}, ${initials}`;
+                    } else {
+                        // Formato "Nombre Apellido"
+                        let nameParts = authorPart.split(' ').filter(n => n);
+                        if (nameParts.length > 1) {
+                            let lastName = nameParts.pop();
+                            lastName = lastName.replace(/[,.]/g, ''); // Limpieza
+                            let initials = nameParts.map(n => n.charAt(0).toUpperCase() + '.').join(' ');
+                            formattedAuthor = `${lastName}, ${initials}`;
+                        }
+                    }
+                }
+
+                // Capitalizamos título
+                if (titlePart) {
+                    titlePart = titlePart.charAt(0).toUpperCase() + titlePart.slice(1);
+                }
+                
+                // Fallbacks en caso de no poder detectar alguna parte
+                if (!formattedAuthor || formattedAuthor.length < 2) formattedAuthor = "Apellido, Inicial";
+                if (!titlePart || titlePart.length < 2) titlePart = "Título desconocido";
+                if (!publisherPart || publisherPart.length < 2) publisherPart = "Editorial desconocida";
+                
+                // Limpieza final de puntuación
+                formattedAuthor = formattedAuthor.replace(/[.,;\s]+$/, '');
+                titlePart = titlePart.replace(/[.,;\s]+$/, '');
+                publisherPart = publisherPart.replace(/[.,;\s]+$/, '');
+
+                // Formato Final: Apellido, I. (Año). Título. Editorial.
+                return `${formattedAuthor}. (${year}). ${titlePart}. ${publisherPart}.`;
+            }
+        });
+    </script>
+</body>
+</html>

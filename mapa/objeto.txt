@@ -1,0 +1,10 @@
+,
+        {
+            id: Num,
+            titulo: "Titulo",
+            categoria: "Lugares,Personas o Sucesos",
+            lat: , 
+            lng: , 
+            img: "nombredelarchivo.jpg",
+            desc: "Descripción."
+        }

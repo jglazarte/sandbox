@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La biblia del café</title>
+    <meta name="description" content="Descubre los métodos de preparación, bebidas y el mundo del café en La biblia del café.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background-container"></div>
+    
+    <header class="hero">
+        <div class="glass-panel">
+            <h1>La biblia del café</h1>
+            <p>El viaje desde el grano hasta tu taza.</p>
+        </div>
+    </header>
+
+    <nav class="sticky-nav">
+        <ul>
+            <li><a href="#metodos">Métodos</a></li>
+            <li><a href="#bebidas">Bebidas</a></li>
+            <li><a href="#mundo">El Mundo</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section id="metodos" class="section">
+            <h2 class="section-title">Métodos de Preparación</h2>
+            <div class="methods-container glass-panel">
+                <div class="methods-list" id="methods-list">
+                    <!-- Botones generados dinámicamente -->
+                </div>
+                <div class="method-details" id="method-details">
+                    <!-- Detalles del método -->
+                    <div class="placeholder-text">Selecciona una cafetera para descubrir sus secretos.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="bebidas" class="section">
+            <h2 class="section-title">Bebidas a base de Café</h2>
+            <div class="drinks-grid" id="drinks-grid">
+                <!-- Tarjetas generadas dinámicamente -->
+            </div>
+        </section>
+
+        <section id="mundo" class="section">
+            <h2 class="section-title">El Cinturón del Café</h2>
+            <div class="world-container glass-panel">
+                <p class="world-intro">El café se cultiva en una región ecuatorial conocida como el "Cinturón del Café". Pasa el ratón sobre las regiones para conocer más.</p>
+                
+                <div class="map-wrapper">
+                    <!-- Simple CSS/SVG Map approximation -->
+                    <svg viewBox="0 0 1000 500" class="world-map">
+                        <path d="M0,0 L1000,0 L1000,500 L0,500 Z" fill="transparent" />
+                        <!-- Equator line -->
+                        <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(255, 255, 255, 0.2)" stroke-width="2" stroke-dasharray="5,5"/>
+                        <text x="10" y="245" fill="rgba(255, 255, 255, 0.5)" font-size="12">Ecuador</text>
+                        <!-- Regions -->
+                        <g class="region" data-region="latam" transform="translate(250, 260)">
+                            <circle cx="0" cy="0" r="15" />
+                            <text x="20" y="5">América Latina</text>
+                        </g>
+                        <g class="region" data-region="africa" transform="translate(520, 240)">
+                            <circle cx="0" cy="0" r="15" />
+                            <text x="20" y="5">África</text>
+                        </g>
+                        <g class="region" data-region="asia" transform="translate(750, 270)">
+                            <circle cx="0" cy="0" r="15" />
+                            <text x="20" y="5">Asia / Pacífico</text>
+                        </g>
+                    </svg>
+                </div>
+                <div class="region-info" id="region-info">
+                    Pasa el ratón sobre un punto en el mapa para descubrir los perfiles de sabor.
+                </div>
+
+                <div class="world-stats-grid">
+                    <div class="stat-card">
+                        <h3>🏆 Top Productores (Anual)</h3>
+                        <ul>
+                            <li><strong>1. Brasil:</strong> ~1/3 del total mundial. Mayormente Arábica, seguido de Robusta.</li>
+                            <li><strong>2. Vietnam:</strong> Mayormente Robusta (ideal para espresso y café soluble).</li>
+                            <li><strong>3. Colombia:</strong> Famoso por su Arábica de alta calidad cultivado en altura.</li>
+                            <li><strong>4. Indonesia:</strong> Arábica y Robusta, famosos por su proceso terroso "Giling Basah".</li>
+                            <li><strong>5. Etiopía:</strong> La cuna del café. Produce Arábica con excepcionales notas florales.</li>
+                        </ul>
+                    </div>
+                    <div class="stat-card">
+                        <h3>☕ Top Consumidores (Per cápita)</h3>
+                        <ul>
+                            <li><strong>1. Luxemburgo:</strong> ~5.3 tazas diarias (muy influenciado por trabajadores fronterizos).</li>
+                            <li><strong>2. Finlandia:</strong> ~3.8 tazas diarias (12 kg anuales). ¡La capital mundial del consumo real!</li>
+                            <li><strong>3. Suecia:</strong> ~2.6 tazas diarias (famosos por su pausa "Fika").</li>
+                            <li><strong>4. Noruega:</strong> ~2.6 tazas diarias (casi 10 kg anuales).</li>
+                            <li><strong>5. Dinamarca:</strong> ~2.0 tazas diarias.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>La biblia del café &copy; 2026. Preparado con pasión.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

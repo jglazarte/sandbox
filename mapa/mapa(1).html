@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Histórico de Azul</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* --- 1. ESTILOS VISUALES (CSS) --- */
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; background-color: #f4f4f4; }
+
+        /* Sidebar */
+        #sidebar {
+            width: 350px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .sidebar-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .sidebar-header h1 { margin: 0; font-size: 22px; font-weight: 300; }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
+
+        /* Filtros */
+        .filters { display: flex; gap: 5px; margin-bottom: 20px; justify-content: center; flex-wrap: wrap; }
+        .filter-btn {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            color: #555;
+            transition: all 0.3s;
+        }
+        .filter-btn:hover { background-color: #d0d0d0; }
+        .filter-btn.active { color: white; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        /* Lista */
+        .place-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-left: 4px solid transparent; /* Borde izquierdo para indicar categoría */
+            border-radius: 4px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .place-item:hover { transform: translateX(5px); box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+        .place-number { font-weight: bold; font-size: 18px; margin-right: 15px; opacity: 0.3; width: 20px; }
+        .place-info h4 { margin: 0; font-size: 15px; color: #2c3e50; }
+        .place-info span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Mapa */
+        #map { flex: 1; height: 100%; }
+
+        /* Popup */
+        .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); padding: 0; overflow: hidden; }
+        .leaflet-popup-content { margin: 0; width: 280px !important; font-family: 'Segoe UI', sans-serif; }
+        .leaflet-popup-tip { background: white; }
+        .popup-content { padding: 0; }
+        .popup-header { padding: 15px 15px 5px 15px; }
+        .popup-header h3 { margin: 0; font-size: 18px; color: #2c3e50; border-bottom: 2px solid; padding-bottom: 5px; }
+        .popup-img { width: 100%; height: 150px; object-fit: cover; display: block; }
+        .popup-body { padding: 15px; font-size: 14px; color: #555; line-height: 1.5; }
+        .popup-footer { padding: 0 15px 15px 15px; }
+        .popup-link { display: inline-block; padding: 8px 12px; color: white; text-decoration: none; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
+
+        /* Marcadores CSS */
+        .custom-pin { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 1px 1px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
+        .custom-pin::after { content: ''; width: 8px; height: 8px; background: white; border-radius: 50%; }
+        .custom-div-icon:hover .custom-pin { transform: rotate(-45deg) scale(1.1); z-index: 1000 !important; }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+    <div class="sidebar-header">
+        <h1>Mapa Histórico</h1>
+        <p style="margin:0; font-size:12px; opacity:0.8;">Azul, Buenos Aires</p>
+    </div>
+    
+    <div class="sidebar-content">
+        <!-- INTRODUCCIÓN -->
+        <div style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 15px;">
+            <p>Azul es una ciudad argentina declarada "Ciudad Cervantina". Explore su patrimonio histórico a través de este mapa interactivo.</p>
+            <a href="https://es.wikipedia.org/wiki/Azul_(Argentina)" target="_blank" style="color:#d35400; font-size:12px; text-decoration:none;">Leer más en Wikipedia &rarr;</a>
+        </div>
+
+        <!-- BOTONES DE FILTRO -->
+        <div class="filters">
+            <button class="filter-btn active" onclick="filtrar('todos', this)">Todos</button>
+            <button class="filter-btn" onclick="filtrar('Lugares', this)">Lugares</button>
+            <button class="filter-btn" onclick="filtrar('Personas', this)">Personas</button>
+            <button class="filter-btn" onclick="filtrar('Sucesos', this)">Sucesos</button>
+        </div>
+
+        <!-- AQUÍ SE GENERARÁ LA LISTA AUTOMÁTICAMENTE -->
+        <div id="lista-lugares"></div>
+    </div>
+</div>
+
+<!-- MAPA -->
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    /* --- 2. CONFIGURACIÓN Y VARIABLES GLOBALES --- */
+    
+    // Configuración de colores por categoría
+    const CONFIG_CATEGORIAS = {
+        "Lugares":  { color: "#d35400", hex: "#d35400" }, // Naranja
+        "Personas": { color: "#2980b9", hex: "#2980b9" }, // Azul
+        "Sucesos":  { color: "#c0392b", hex: "#c0392b" }  // Rojo
+    };
+
+    const RUTA_IMAGENES = "img/"; // Carpeta donde guardarás tus fotos
+
+    // Inicialización del Mapa
+    var map = L.map('map', {
+        center: [-36.7782, -59.8514],
+        zoom: 14,
+        minZoom: 13,
+        maxBounds: L.latLngBounds([-36.8500, -59.9500], [-36.7000, -59.7500]),
+        maxBoundsViscosity: 1.0,
+        zoomControl: false
+    });
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    // Grupos de capas para manejar los filtros
+    var marcadoresLayer = L.layerGroup().addTo(map); // Todos los pins
+    var listaContainer = document.getElementById('lista-lugares');
+
+    /* --- 3. BASE DE DATOS (ARRAY) --- */
+    // AQUÍ ES DONDE AGREGARÁS TODA TU INFORMACIÓN FUTURA
+    const datosLugares = [
+        {
+            id: 1,
+            titulo: "Teatro Español",
+            categoria: "Lugares",
+            lat: -36.77790214851834,
+            lng: -59.86398817505389,
+            img: "teatro.jpg", // Nombre de tu archivo en la carpeta /img/
+            desc: "Inaugurado en 1897, es una joya arquitectónica y centro cultural de la ciudad."
+        },
+        {
+            id: 2,
+            titulo: "Cementerio Municipal",
+            categoria: "Lugares",
+            lat: -36.77382150792018, 
+            lng: -59.8516213167155,
+            img: "cementerio.jpg",
+            desc: "Destacado por su obra de Salamone: el imponente ángel exterminador Art Decó."
+        },
+        {
+            id: 3,
+            titulo: "Estación de Trenes",
+            categoria: "Lugares",
+            lat: -36.78558230323357, 
+            lng: -59.85312178449211,
+            img: "libertad.jpg",
+            desc: "Averiguar algo para completar"
+        },
+        {
+            id: 4,
+            titulo: "Portada del Parque",
+            categoria: "Lugares",
+            lat: -36.78296315014784, 
+            lng: -59.870865942119586,
+            img: "https://salidores.sfo2.cdn.digitaloceanspaces.com/posts/56e04905a20cae6b2d201213/images/514626e925601049fe24984f649b48ee.jpg",
+            desc: "Parque Domingo Faustino Sarmiento. Ya escribiré más"
+        },
+        {
+            id: 5,
+            titulo: "Monumento a Cervantes",
+            categoria: "Personas",
+            lat: -36.77005656088001, 
+            lng: -59.86838589751963, 
+            img: "cervantes.jpg",
+            desc: "Homenaje al autor del Quijote, celebrando el título de Ciudad Cervantina."
+        },
+        {
+            id: 6,
+            titulo: "Plaza Gral. José de San Martín",
+            categoria: "Lugares",
+            lat: -36.77750494736477, 
+            lng: -59.863603806019285, 
+            img: "fuertessm.jpg",
+            desc: "Fuerte San Serapio Martir, Luego fuente de las nereidas hasta que llega al actual estado."
+        }
+    ];
+
+    /* --- 4. MOTOR (LÓGICA QUE GENERA EL MAPA) --- */
+    
+    // Función auxiliar para crear iconos según el color
+    function crearIcono(color) {
+        return L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div class="custom-pin" style="background-color: ${color};"></div>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -30]
+        });
+    }
+
+    // Función para inicializar la aplicación
+    function iniciarApp() {
+        datosLugares.forEach(lugar => {
+            // 1. Obtener configuración de color
+            const config = CONFIG_CATEGORIAS[lugar.categoria] || { color: '#7f8c8d' };
+            const color = config.color;
+
+            // 2. Crear Marcador en el Mapa
+            const marcador = L.marker([lugar.lat, lugar.lng], {icon: crearIcono(color)});
+            
+            // 3. Crear contenido del Popup
+            const popupContent = `
+                <div class="popup-content">
+                    <div class="popup-header">
+                        <h3 style="border-color: ${color}">${lugar.titulo}</h3>
+                    </div>
+                    <img src="${RUTA_IMAGENES}${lugar.img}" class="popup-img" onerror="this.src='https://via.placeholder.com/300x150?text=Sin+Foto'">
+                    <div class="popup-body">
+                        ${lugar.desc}
+                    </div>
+                    <div class="popup-footer">
+                        <span style="font-size:10px; color:#999; text-transform:uppercase;">${lugar.categoria}</span>
+                    </div>
+                </div>
+            `;
+            marcador.bindPopup(popupContent);
+            
+            // Guardar referencia al marcador en el objeto de datos para poder acceder luego
+            lugar.markerRef = marcador; 
+            
+            // Agregar al grupo de capas
+            marcadoresLayer.addLayer(marcador);
+
+            // 4. Crear Elemento en la Lista Lateral
+            const itemLista = document.createElement('div');
+            itemLista.className = 'place-item';
+            itemLista.dataset.categoria = lugar.categoria; // Para filtros
+            itemLista.style.borderLeftColor = color; // Indicador visual de color
+            itemLista.innerHTML = `
+                <div class="place-number" style="color:${color}">${lugar.id}</div>
+                <div class="place-info">
+                    <h4>${lugar.titulo}</h4>
+                    <span style="color:${color}">${lugar.categoria}</span>
+                </div>
+            `;
+            
+            // Evento Click en la lista
+            itemLista.addEventListener('click', () => {
+                map.flyTo([lugar.lat, lugar.lng], 16);
+                setTimeout(() => marcador.openPopup(), 1000);
+            });
+
+            listaContainer.appendChild(itemLista);
+        });
+    }
+
+    /* --- 5. LÓGICA DE FILTROS --- */
+    function filtrar(categoria, btnElement) {
+        // Actualizar estilo de botones
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btnElement.classList.add('active');
+
+        // Filtrar Lista
+        const items = document.querySelectorAll('.place-item');
+        items.forEach(item => {
+            if (categoria === 'todos' || item.dataset.categoria === categoria) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Filtrar Marcadores en el Mapa
+        marcadoresLayer.clearLayers();
+        datosLugares.forEach(lugar => {
+            if (categoria === 'todos' || lugar.categoria === categoria) {
+                marcadoresLayer.addLayer(lugar.markerRef);
+            }
+        });
+    }
+
+    // Ejecutar al cargar
+    iniciarApp();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Edad</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 0;
+            background-color: #6A63C6; /* Estilo morado similar a la web */
+            color: #2C3E50;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            color: white;
+        }
+        .container { 
+            max-width: 500px; 
+            margin: 0 auto 50px auto; 
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h2 { text-align: center; color: #2C3E50; margin-top: 0; }
+        label { display: block; margin: 15px 0 5px; font-weight: 600; }
+        input { 
+            display: block; width: 100%; padding: 12px; 
+            border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box;
+        }
+        button { 
+            display: block; width: 100%; margin-top: 20px; padding: 12px; 
+            background-color: #3498db; color: white; border: none; 
+            border-radius: 8px; font-size: 16px; cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #2980b9; }
+        #result { 
+            margin-top: 25px; padding: 15px; 
+            background-color: #f8f9fa; border-radius: 8px; text-align: center;
+            font-size: 1.2em; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Web de proyectos de Jglazarte</h1>
+        <p>Herramientas legales</p>
+    </div>
+
+    <div class="container">
+        <h2>Calculadora de Edad</h2>
+        <label>Fecha de nacimiento:</label>
+        <input type="date" id="birthDate">
+        
+        <label>Fecha a calcular:</label>
+        <input type="date" id="targetDate">
+        
+        <button onclick="calculateAge()">Calcular Edad</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function calculateAge() {
+            const birthDate = new Date(document.getElementById('birthDate').value);
+            const targetDate = new Date(document.getElementById('targetDate').value);
+            const resultDiv = document.getElementById('result');
+
+            if (isNaN(birthDate) || isNaN(targetDate)) {
+                resultDiv.innerHTML = "Por favor, selecciona ambas fechas.";
+                return;
+            }
+
+            if (birthDate > targetDate) {
+                resultDiv.innerHTML = "La fecha de nacimiento no debe ser posterior a la fecha de cálculo.";
+                return;
+            }
+
+            let years = targetDate.getFullYear() - birthDate.getFullYear();
+            let months = targetDate.getMonth() - birthDate.getMonth();
+            let days = targetDate.getDate() - birthDate.getDate();
+
+            if (days < 0) {
+                months--;
+                const prevMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 0);
+                days += prevMonth.getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            resultDiv.innerHTML = `Edad: ${years} años, ${months} meses y ${days} días.`;
+        }
+    </script>
+</body>
+</html>
